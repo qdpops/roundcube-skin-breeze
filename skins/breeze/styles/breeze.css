@@ -2453,3 +2453,11 @@ body.task-addressbook #layout-list table.listing td.selection { overflow: visibl
 
 /* Roundcube 1.7: Elastic's hover menu on message rows (size, flag, delete). Breeze rows have their own actions, and the menu ignores date-group headers when positioning */
 .listing-hover-menu { display: none !important; }
+
+/* new extra mailbox (ident_switch): required fields, the error state, the "Server settings" link */
+body.task-settings tr.tw-required td.title label::after { content: " *"; color: var(--tw-red); }
+body.task-settings tr.tw-invalid input { border-color: var(--tw-red) !important; box-shadow: 0 0 0 3px rgba(240, 68, 91, .15) !important; }
+body.task-settings table.propform tr.tw-servers-row { justify-content: flex-start; }
+body.task-settings tr.tw-servers-row td { padding: 0; }
+.tw-servers-toggle { padding: 0; border: 0; background: none; color: var(--tw-accent); font: inherit; font-size: 14px; cursor: pointer; }
+.tw-servers-toggle:hover { color: var(--tw-accent-hover); text-decoration: underline; }

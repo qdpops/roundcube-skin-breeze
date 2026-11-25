@@ -81,6 +81,8 @@
             settings();
         if (task == 'settings' && action == 'edit-prefs' && $('input[name="_section"]').val() == 'general')
             layout_cards();
+        if (task == 'settings' && /-identity$/.test(action))
+            account_form();
         if (task == 'settings' && host() && $('.formbuttons').length)
             autosave();
         if (task == 'settings' && action == 'plugin.tw-filters')
@@ -1221,7 +1223,7 @@
        an explicit "Создать" button: saving them field by field would create half-filled records. */
     function autosave() {
         var form = $('.formbuttons').first().closest('form'),
-            creating = /^add-/.test(rcmail.env.action)
+            creating = /^add-/.test(rcmail.env.action) || new_identity()
                 || (rcmail.env.action == 'edit-folder' && !$('input[name="_mbox"]').val()),
             timer, busy = false, again = false;
 
@@ -1249,6 +1251,8 @@
             busy = true;
             if (window.tinymce)
                 tinymce.triggerSave();
+            if (window.tw_before_save)
+                tw_before_save();
 
             $.ajax({type: 'POST', url: form.attr('action') || location.href, data: form.serialize()})
                 .done(function(html) {
@@ -1292,6 +1296,85 @@
             $.each(tinymce.get() || [], function(i, ed) { watch(ed); });
             tinymce.on('AddEditor', function(e) { watch(e.editor); });
         }
+    }
+
+    // a failed "Create" comes back as edit-identity without an id: it is still a creation, not an edit to autosave
+    function new_identity() {
+        return rcmail.env.action == 'edit-identity' && !(+$('input[name="_iid"]').val());
+    }
+
+    /* ----------------------------------------------------------------- settings: extra mailbox form (ident_switch plugin)
+       A new identity is always a separate mailbox: name, address and password; the servers come from the
+       plugin's preconfig and stay folded under "Server settings" unless the domain has none. */
+    function account_form() {
+        var mode = $('select[name="_ident_switch.form.common.mode"]');
+        if (!mode.length)
+            return;
+
+        function field(name) { return $('[name="_ident_switch.form.' + name + '"]'); }
+        function row(el) { return el.closest('tr'); }
+
+        // the plugin blanks ports equal to the default, then sends mail via port 587 when the SMTP port is empty
+        window.tw_before_save = function() {
+            $.each(['imap', 'smtp'], function(i, p) {
+                var port = field(p + '.port');
+                if (!$.trim(port.val()))
+                    port.val(port.attr('placeholder'));
+            });
+        };
+
+        if (!/^add-/.test(rcmail.env.action) && !new_identity()) {
+            if (mode.val() == 'separate')
+                mode.closest('fieldset').hide(); // switching a mailbox to "Primary" would just disable it
+            return;
+        }
+
+        var email = $('input[name="_email"]'), pass = field('imap.password'),
+            servers = field('imap.host').closest('fieldset').add(field('smtp.host').closest('fieldset')),
+            preconfig = rcmail.env.ident_switch_preconfig || {};
+
+        var extra = mode.closest('fieldset').add(field('common.label').closest('fieldset'))
+            .add(field('notify.check').closest('fieldset')).add($('[name="_signature"]').closest('fieldset'));
+
+        $('h1.voice').first().text(t('new_account'));
+        $.each(['_organization', '_reply-to', '_bcc', '_standard'], function(i, name) { row($('[name="' + name + '"]')).hide(); });
+
+        row(pass).insertAfter(row(email));
+        row(email).add(row(pass)).addClass('tw-required');
+        email.add(pass).attr('required', true).on('input', function() { row($(this)).removeClass('tw-invalid'); });
+        if (new_identity()) // back from a failed connection test: most often the password
+            setTimeout(function() { row(pass).addClass('tw-invalid'); pass.focus().select(); }, 0);
+
+        function show_servers(on) {
+            servers.toggle(on);
+            toggle.attr('aria-expanded', String(on));
+        }
+        var toggle = $('<button type="button" class="tw-servers-toggle">').text(t('server_settings'))
+            .on('click', function() { show_servers(!servers.is(':visible')); });
+        $('<tr class="tw-servers-row"><td colspan="2"></td></tr>').insertAfter(row(pass)).find('td').append(toggle);
+
+        function apply_mode() {
+            var domain = (email.val().split('@')[1] || '').toLowerCase();
+            mode.prop('disabled', false).val('separate');
+            plugin_switchIdent_mode_onChange('separate'); // shows every section of a separate account
+            extra.hide();
+            show_servers(!(preconfig[domain] || preconfig['*']));
+        }
+        // after the plugin's own docready init, which picks "Primary" and disables the select without an address
+        setTimeout(apply_mode, 0);
+        email.on('change', function() { setTimeout(apply_mode, 0); });
+
+        rcmail.addEventListener('beforesave', function() {
+            var empty = email.add(pass).filter(function() { return !$.trim(this.value); });
+            row(empty).addClass('tw-invalid');
+            if (empty.length) {
+                empty.first().focus();
+                parent.rcmail.display_message(t('fill_required'), 'warning');
+                return false;
+            }
+            mode.prop('disabled', false).val('separate'); // a disabled select is not sent: the plugin would save a plain identity
+            tw_before_save();
+        });
     }
 
     /* ----------------------------------------------------------------- settings: message layout cards (Timeweb's three cards) */
