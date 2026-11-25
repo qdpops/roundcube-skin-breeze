@@ -31,19 +31,25 @@
     function t(key) { return rcmail.gettext(key, 'tw_folders'); }
     function locale() { return (rcmail.env.locale || 'en_US').replace('_', '-'); }
 
-    // "5 писем" / "5 messages": label <key>_one|few|many|other picked by the language's plural rules
-    function tn(n, key) {
-        var k = 'tw_folders.' + key + '_' + new Intl.PluralRules(locale()).select(n);
-        return n + ' ' + (rcmail.labels[k] || t(key + '_other'));
-    }
+    // free mail: people, not companies; their provider's logo would say nothing about the sender
+    var FREEMAIL = /^(gmail|googlemail|yandex|ya|mail|bk|inbox|list|internet|rambler|lenta|autorambler|myrambler|ro|outlook|hotmail|live|msn|icloud|me|mac|yahoo|aol|proton|protonmail|pm|gmx|zoho|tutanota|tuta|ukr|i)\.[a-z]{2,3}$/;
 
-    function avatar(name) {
-        var h = 0;
+    // a letter in a coloured circle; with an address, the sender's logo (tw_folders, plugin.tw-logo) covers it once loaded
+    function avatar(name, email) {
+        var h = 0, domain = (String(email || '').split('@')[1] || '').toLowerCase(), el;
         name = $.trim(name || '') || '?';
         for (var i = 0; i < name.length; i++)
             h = (h * 31 + name.charCodeAt(i)) | 0;
-        return $('<span class="tw-avatar" aria-hidden="true">').text(name.charAt(0).toUpperCase())
+        el = $('<span class="tw-avatar skip-on-drag" aria-hidden="true">').text(name.charAt(0).toUpperCase())
             .css('background-color', COLORS[Math.abs(h) % COLORS.length]);
+
+        if (/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain) && !FREEMAIL.test(domain))
+            $('<img alt="" loading="lazy" decoding="async">')
+                .on('load', function() { el.addClass('tw-has-logo'); })
+                .on('error', function() { $(this).remove(); })
+                .attr('src', rcmail.url('mail/plugin.tw-logo', {_domain: domain}))
+                .appendTo(el);
+        return el;
     }
 
     // every compose route (new, reply, forward, draft, mailto) ends in open_compose_step
@@ -125,10 +131,11 @@
 
         // while messages are checked, a click anywhere on a row ticks / unticks it instead of opening it and
         // dropping the checked set (a near miss of a checkbox); the flag and attachment chips keep their clicks
+        // the avatar is the row's checkbox (there is no checkbox column)
         function row_toggle(e) {
             var t = $(e.target), cb = t.closest('tbody tr').find('td.selection input');
             if (!cb.length || t.closest('td.selection, td.flags, .tw-chips').length
-                || !$('#messagelist td.selection input:checked').length)
+                || (!t.closest('.tw-avatar').length && !$('#messagelist td.selection input:checked').length))
                 return;
             e.stopPropagation();
             e.preventDefault();
@@ -143,6 +150,10 @@
 
         var get_preview = rcmail.msglist_get_preview;
         rcmail.msglist_get_preview = function() {
+            if (TW.no_preview) { // a right click selected the row (message_menu)
+                TW.no_preview = false;
+                return;
+            }
             // with the list in view (split layouts, phones) arrows preview as usual; full-width list opens by click only
             if (!split && wide() && !clicked && !body.hasClass('tw-reading'))
                 return;
@@ -173,8 +184,11 @@
             reading(false);
             return false;
         });
+        // list.js 1.7 has no select_prev (and select_next falls back to the row above): step with get_*_row
         $('#mailtoolbar .tw-nav-prev, #mailtoolbar .tw-nav-next').on('click', function() {
-            list[$(this).is('.tw-nav-prev') ? 'select_prev' : 'select_next']();
+            var row = list[$(this).is('.tw-nav-prev') ? 'get_prev_row' : 'get_next_row']();
+            if (row)
+                list.select_row(row.uid, false, false);
             return false;
         });
 
@@ -203,11 +217,100 @@
             if (opened && list.rows[opened])
                 $(list.rows[opened].obj).find('td.selection input').prop('checked', false);
 
-            body.toggleClass('tw-has-selection', checked);
+            // one bar: the opened message's actions show there too (no message bar of its own)
+            body.toggleClass('tw-has-selection', checked || (n > 0 && body.hasClass('tw-unibar')));
             all.prop('checked', checked && n == list.rowcount).prop('indeterminate', checked && n < list.rowcount);
+            fit_listbar(); // other buttons now
         });
 
-        rcmail.addEventListener('listupdate', function() { decorate(); chips(); pager(); });
+        /* the read mark of the chosen messages turns into "Пометить непрочитанным"
+           while the opened / ticked messages are all read. Roundcube rewrites the buttons' classes on every
+           enable_command, so the mode is a class on the bar (CSS swaps the icon) and the click is caught before theirs. */
+        var bar = $('.tw-listbar'),
+            unread_btns = bar.find('.tw-when-none .ti-mail-open, .tw-when-selected .ti-mail-open'),
+            words = unread_btns.map(function() { return [[$(this).find('.inner').text(), this.title]]; }).get(),
+            // the bookmark likewise: "Снять флаг" (filled) while every chosen message is flagged
+            flag_btns = $('.tw-listbar .tw-when-selected .ti-bookmark, #mailtoolbar .ti-bookmark'),
+            flag_words = flag_btns.map(function() { return [[$(this).find('.inner').text(), this.title]]; }).get(),
+            read_timer;
+
+        function all_rows(sel, test) {
+            var on = sel.length > 0;
+            $.each(sel, function(i, uid) { return (on = !!list.rows[uid] && test($(list.rows[uid].obj))); });
+            return on;
+        }
+
+        function read_mode() {
+            var sel = list.get_selection(),
+                on = all_rows(sel, function(r) { return !r.hasClass('unread'); }),
+                flagged = all_rows(sel, function(r) { return r.hasClass('flagged'); });
+            bar.toggleClass('tw-unread-mode', on);
+            unread_btns.each(function(i) {
+                $(this).attr('title', on ? t('mark_unread') : words[i][1]).find('.inner').text(on ? t('mark_unread') : words[i][0]);
+            });
+            body.toggleClass('tw-flag-mode', flagged);
+            flag_btns.each(function(i) {
+                var label = flagged ? rcmail.gettext('markunflagged') : flag_words[i][0];
+                $(this).attr('title', flagged ? label : flag_words[i][1]).find('.inner').text(label);
+            });
+            fit_listbar();
+        }
+
+        // capture: before Roundcube's own onclick on these buttons
+        document.addEventListener('click', function(e) {
+            if (bar.hasClass('tw-unread-mode') && $(e.target).closest(unread_btns).length) {
+                e.preventDefault();
+                e.stopPropagation();
+                rcmail.command('mark', 'unread');
+            }
+            else if (body.hasClass('tw-flag-mode') && $(e.target).closest(flag_btns).length) {
+                e.preventDefault();
+                e.stopPropagation();
+                rcmail.command('mark', 'unflagged');
+            }
+        }, true);
+
+        list.addEventListener('select', read_mode);
+        // rows change read state from many places (preview marks read, the server, other buttons): watch their classes
+        new MutationObserver(function() { clearTimeout(read_timer); read_timer = setTimeout(read_mode, 50); })
+            .observe(list.list, {subtree: true, attributes: true, attributeFilter: ['class']});
+
+        // "наверх": shown once the list is scrolled down a screen
+        var scroller = $('#messagelist-content'), to_top = $('.tw-to-top');
+        scroller.on('scroll', function() { to_top.prop('hidden', this.scrollTop < this.clientHeight); });
+        to_top.on('click', function() { scroller[0].scrollTo({top: 0, behavior: 'smooth'}); });
+
+        // the bar is measured again whenever the list pane changes width (split border, window)
+        // (kept in TW: an observer nothing refers to can be garbage-collected and stop reporting)
+        if (window.ResizeObserver) {
+            TW.listbar_observer = new ResizeObserver(function() { fit_listbar(); });
+            TW.listbar_observer.observe(document.getElementById('layout-list'));
+            TW.listbar_observer.observe($('#layout-list > .header')[0]); // it moves out in the one-bar layout
+        }
+
+        /* "Письмо справа" on wide screens: one bar over the list and the message (Timeweb). The list's header
+           moves out of the list into a grid row of its own, the message bar's "more" menu joins its
+           message actions, the message bar itself is hidden (CSS, body.tw-unibar). Back as it was otherwise. */
+        var list_header = $('#layout-list > .header'), more_menu = $('#messagemenulink');
+        function unibar() {
+            var on = preview == 'right' && wide(), out = list_header.parent().is('#layout');
+            body.toggleClass('tw-unibar', on);
+            if (on && !out) {
+                list_header.addClass('tw-unibar-host').insertBefore('#layout-list');
+                var move = list_header.find('.tw-when-selected .ti-folder');
+                more_menu.insertAfter(move);
+            }
+            else if (!on && out) {
+                list_header.removeClass('tw-unibar-host').prependTo('#layout-list');
+                var back = $('#mailtoolbar .ti-folder');
+                more_menu.insertAfter(back);
+            }
+            fit_listbar();
+        }
+        unibar();
+        rcmail.addEventListener('skin-resize', unibar);
+
+        rcmail.addEventListener('listupdate', function() { decorate(); chips(); pager(); snippets(); });
         rcmail.addEventListener('insertrow', function() { clearTimeout(timer); timer = setTimeout(function() { decorate(); chips(); }, 0); });
 
         if (split)
@@ -219,6 +322,7 @@
         rcmail.addEventListener('skin-resize', search_slot);
         decorate();
         pager();
+        snippets();
     }
 
     /* draggable border between list and message in split layouts; size kept in the tw_split user pref */
@@ -326,7 +430,7 @@
             if (!info || !row.obj || $(row.obj).find('.tw-chips').length)
                 return;
             td = $(row.obj).children('td.subject');
-            var box = $('<span class="tw-chips">'),
+            var box = $('<span class="tw-chips skip-on-drag">'),
                 mbox = rcmail.get_message_mailbox(uid), id = String(uid).split('-')[0];
             $.each(info.files, function(i, f) {
                 $('<a class="tw-chip" download>').attr({href: rcmail.url('get', {_mbox: mbox, _uid: id, _part: f[2], _download: 1, _token: rcmail.env.request_token}), title: f[0]}) // downloads need the CSRF token
@@ -344,10 +448,171 @@
         });
     }
 
-    function pager() {
-        var page = rcmail.env.current_page || 1, pages = rcmail.env.pagecount || 1, count = rcmail.env.messagecount || 0;
-        $('#tw-page').text((pages > 1 ? page + ' ' + t('of') + ' ' + pages + ' · ' : '') + tn(count, 'messages'));
+    /* the start of each message's text, under the subject in three-line rows (tw_folders, plugin.tw-snippets);
+       asked after the list is drawn so it doesn't slow the list down, kept for this page load */
+    var snippet_text = {}, snippet_asked = {};
+
+    function snippet_key(uid) { return /-/.test(uid) ? uid : uid + '-' + rcmail.env.mailbox; }
+
+    function snippets() {
+        var list = rcmail.message_list, ask = [];
+        if (!list)
+            return;
+
+        $.each(list.rows, function(uid, row) {
+            var key = snippet_key(uid), td = $(row.obj).children('td.subject');
+            if (key in snippet_text) {
+                var span = td.children('.tw-snippet');
+                if (snippet_text[key] && !span.text())
+                    (span.length ? span : $('<span class="tw-snippet skip-on-drag">').appendTo(td)).text(snippet_text[key]);
+            }
+            else if (!snippet_asked[key])
+                ask.push(uid);
+        });
+
+        // one-line rows show no text: ask only when the rows are three-line (grid)
+        if (ask.length && $('#messagelist > tbody > tr').first().css('display') == 'grid') {
+            $.each(ask, function(i, uid) { snippet_asked[snippet_key(uid)] = true; });
+            rcmail.http_post('plugin.tw-snippets', {_uids: ask.join(','), _mbox: rcmail.env.mailbox});
+        }
     }
+
+    rcmail.addEventListener('plugin.tw_snippets', function(r) {
+        $.each(r.asked || [], function(i, uid) { snippet_text[snippet_key(uid)] = (r.text || {})[uid] || ''; });
+        snippets();
+    });
+
+    /* list bar, right side: "[page] of N  < >  | filter | list options"; threads and the page size are in the
+       list options panel, the message count is shown nowhere (the folder's unread count is in the sidebar) */
+    function pager() {
+        var page = rcmail.env.current_page || 1, pages = rcmail.env.pagecount || 1;
+
+        $(document.body).toggleClass('tw-in-trash', !!rcmail.env.trash_mailbox && rcmail.env.mailbox == rcmail.env.trash_mailbox);
+        $('#tw-pagenum').prop('hidden', pages < 2);
+        $('#tw-page-input').val(page);
+        $('#tw-page-of').text(t('of') + ' ' + pages);
+        $('#tw-filter-btn').toggleClass('tw-active', period_filter() != 'ALL');
+        period_panel();
+        listopts_panel();
+        years_prefetch();
+        fit_listbar();
+    }
+
+    /* "Период" (the funnel): sort order and messages per year, counts from tw_folders (plugin.tw-years) */
+    var years = {}; // per folder, for this page load
+
+    // Roundcube keeps the last filter in env after the search is gone (a folder clicked): only a live search counts
+    function period_filter() { return (rcmail.env.search_request && rcmail.env.search_filter) || 'ALL'; }
+    function year_filter(y) { return 'SENTSINCE 1-Jan-' + y + ' SENTBEFORE 1-Jan-' + (y + 1); }
+
+    function period_panel() {
+        var box = $('#tw-filter-menu'), data = years[rcmail.env.mailbox], current = period_filter(),
+            desc = (rcmail.env.sort_order || 'DESC') == 'DESC', list = $('<ul class="tw-period-years" role="menu">');
+
+        function year_row(filter, label, n) {
+            var on = current == filter;
+            $('<li role="none">').append($('<a href="#" role="menuitemradio">').attr('aria-checked', String(on))
+                .append($('<span>').text(label), $('<span class="tw-period-n">').text(n == null ? '' : n))
+                .on('click', function() {
+                    close_menus();
+                    if (!on) {
+                        rcmail.env.search_scope = 'base';
+                        rcmail.filter_mailbox(filter);
+                    }
+                    return false;
+                })).appendTo(list);
+        }
+
+        if (data) {
+            year_row('ALL', t('period_all'), data.total);
+            $.each(data.years, function(i, y) { year_row(year_filter(y[0]), t('period_year').replace('$y', y[0]), y[1]); });
+        }
+        else
+            $('<li class="tw-period-wait">').text(t('loading')).appendTo(list);
+
+        box.empty().append(
+            $('<div class="tw-period-head">').append($('<span>').text(t('period')),
+                $('<a href="#" class="tw-btn tw-icon-only tw-round ti ti-close">').attr('title', t('close'))
+                    .on('click', function() { close_menus(); return false; })),
+            $('<div class="tw-period-label">').text(t('sorting')),
+            $.map([['DESC', t('newest_first'), desc], ['ASC', t('oldest_first'), !desc]], function(o) {
+                return $('<label class="tw-radio">').append(
+                    $('<input type="radio" name="tw_order">').val(o[0]).prop('checked', o[2]).on('change', function() {
+                        rcmail.set_list_options([], rcmail.env.sort_col || 'date', o[0]);
+                    }), $('<span>').text(o[1]))[0];
+            }),
+            $('<div class="tw-period-label">').text(t('messages_label')),
+            list
+        );
+    }
+
+    // the sliders button: sort column and threads, next to the button (Roundcube's own dialog opens mid-screen;
+    // the sort order is in "Период")
+    function listopts_panel() {
+        var box = $('#tw-listopts-menu'),
+            col = $('<select>').append($('#listoptions-sortcol option').clone()).val(rcmail.env.sort_col || '')
+                .on('change', function() {
+                    rcmail.set_list_options([], this.value, rcmail.env.sort_order, rcmail.env.threading ? 1 : 0);
+                });
+
+        // page sizes up to Roundcube's default max_pagesize (200); mail_pagesize is in tw_folders' allowed_prefs
+        var size = $('<select>').append($.map([25, 50, 100, 200], function(n) { return $('<option>').val(n).text(n)[0]; }))
+            .val(String(+rcmail.env.pagesize || 50))
+            .on('change', function() {
+                var v = +this.value;
+                rcmail.addEventListener('responseaftersave-pref', function once() { // list again once it is stored
+                    rcmail.removeEventListener('responseaftersave-pref', once);
+                    rcmail.env.pagesize = v;
+                    rcmail.list_mailbox(rcmail.env.mailbox, 1);
+                });
+                rcmail.http_post('utils/save-pref', {_name: 'mail_pagesize', _value: v});
+            });
+
+        box.empty().append($('<label class="tw-opt tw-opt-select">').append($('<span>').text(t('sort_by')), col),
+            $('<label class="tw-opt tw-opt-select">').append($('<span>').text(t('page_size')), size));
+        if (rcmail.env.threads) // the IMAP server can thread
+            box.append($('<label class="tw-opt">').append($('<span>').text(t('threads_group')),
+                $('<input type="checkbox" class="tw-switch">').prop('checked', !!rcmail.env.threading).on('change', function() {
+                    rcmail.set_list_options([], rcmail.env.sort_col, rcmail.env.sort_order, this.checked ? 1 : 0);
+                })));
+    }
+
+    // counts are asked for as soon as a folder is listed (once per folder), so the panel opens ready
+    var years_asked = {};
+    function years_prefetch() {
+        var mbox = rcmail.env.mailbox;
+        if (mbox && !years_asked[mbox]) {
+            years_asked[mbox] = true;
+            rcmail.http_request('plugin.tw-years', {_mbox: mbox});
+        }
+    }
+    rcmail.addEventListener('plugin.tw_years', function(r) {
+        years[r.mbox] = r;
+        period_panel();
+    });
+
+    // one line always: only when the bar doesn't fit, drop the button words, then the page field
+    var TIGHT = ['tw-tight', 'tw-tighter'];
+    function fit_listbar() {
+        var bar = document.querySelector('.tw-listbar');
+        if (!bar)
+            return;
+        bar.classList.remove.apply(bar.classList, TIGHT);
+        for (var i = 0; i < TIGHT.length && bar.scrollWidth > bar.clientWidth; i++)
+            bar.classList.add(TIGHT[i]);
+    }
+
+    // the page field: Enter (or leaving it) opens that page
+    $(document).on('keydown change', '#tw-page-input', function(e) {
+        if (e.type == 'keydown' && e.key != 'Enter')
+            return;
+        var n = Math.min(Math.max(parseInt(this.value, 10) || 1, 1), rcmail.env.pagecount || 1);
+        if (n != rcmail.env.current_page)
+            rcmail.list_page(n);
+        else
+            this.value = n;
+        return e.type != 'keydown';
+    });
 
     // date groups + avatars + Timeweb dates. Group labels sit in data attributes:
     // list.js treats every <tr> of the table as a message, extra rows would break keyboard navigation.
@@ -366,7 +631,10 @@
             var row = $(this), td = row.children('td.subject'), el = td.children('span.date'), d = el.data('tw-date'), m, label;
 
             if (!td.children('.tw-avatar').length)
-                avatar(td.find('span.fromto').text()).prependTo(td);
+                avatar(td.find('span.fromto').text(), td.find('span.fromto [title]').attr('title')).prependTo(td);
+            // the third line exists from the start (empty, full height); snippets() fills it in, the row keeps its size
+            if (!td.children('.tw-snippet').length)
+                $('<span class="tw-snippet skip-on-drag">').appendTo(td);
 
             if (!d) {
                 if (!(m = /^(\d{4})-(\d\d)-(\d\d) (\d\d:\d\d)$/.exec($.trim(el.text()))))
@@ -407,6 +675,7 @@
 
         folders_block(quick.children('.tw-q-heading'));
         folder_menu();
+        message_menu();
 
         // accounts (ident_switch plugin): list in the sidebar, the plugin's <select> does the switching
         var select = $('#plugin-ident_switch-account'), box = $('#tw-accounts');
@@ -680,23 +949,134 @@
     /* ----------------------------------------------------------------- folder "⋮" menu: edit, delete */
     var menu_folder = null;
 
+    // folder actions: the "⋮" button of user folders and a right click on any folder
     function folder_menu() {
         var special = '.inbox,.drafts,.sent,.junk,.trash,.archive',
-            menu = $('<div id="tw-folder-menu" class="tw-menu" hidden><ul role="menu"></ul></div>').appendTo(document.body),
-            ul = menu.children('ul');
+            menu = $('<div id="tw-folder-menu" class="tw-menu tw-ctx" hidden><ul role="menu"></ul></div>').appendTo(document.body);
 
-        $('<li role="menuitem">').append($('<a href="#edit">').text(t('edit'))).appendTo(ul)
-            .on('click', 'a', function() { folder_dialog(menu_folder); return false; });
-        $('<li role="menuitem">').append($('<a href="#delete" class="tw-danger">').text(t('delete_folder'))).appendTo(ul)
-            .on('click', 'a', function() { delete_folder(menu_folder); return false; });
+        function fill(li) {
+            var id = li.children('a').attr('rel'), env = rcmail.env, items = [];
+            menu_folder = id;
+            if ((env.unread_counts || {})[id])
+                items.push([rcmail.gettext('markallread'), 'mail-open', function() { rcmail.mark_all_read(id); }]);
+            if (id == env.trash_mailbox || id == env.junk_mailbox)
+                items.push([rcmail.gettext('empty'), 'trash', function() { rcmail.purge_mailbox(id); }, 'tw-danger']);
+            if (!li.is(special)) {
+                items.push(null, [t('edit'), 'settings', function() { folder_dialog(id); }]);
+                items.push([t('delete_folder'), 'trash', function() { delete_folder(id); }, 'tw-danger']);
+            }
+            return ctx_fill(menu, items);
+        }
 
         $('#mailboxlist li.mailbox').not(special).each(function() {
-            var li = $(this), id = li.children('a').attr('rel');
+            var li = $(this);
             $('<button type="button" class="tw-folder-more ti ti-more-vertical" data-tw-menu="tw-folder-menu" aria-haspopup="true">')
                 .attr('title', t('folder_actions'))
                 .append($('<span class="inner">').text(t('folder_actions')))
-                .on('click', function() { menu_folder = id; return open_menu.call(this); }) // the folder list stops clicks from bubbling
+                .on('click', function() { fill(li); return open_menu.call(this); }) // the folder list stops clicks from bubbling
                 .appendTo(li);
+        });
+
+        // to the right of the folder, not under the pointer on top of it
+        $('#mailboxlist').on('contextmenu', 'li.mailbox > a', function() {
+            var r = this.getBoundingClientRect();
+            if (fill($(this).parent()))
+                ctx_open(menu, {clientX: r.right + 8, clientY: r.top});
+            return false;
+        });
+    }
+
+    /* ----------------------------------------------------------------- right-click menus (messages, folders)
+       items: [label, icon, action, extra class] or null for a separator; false when there is nothing to show */
+    function ctx_fill(menu, items) {
+        var ul = menu.children('ul').empty();
+        $.each(items, function(i, it) {
+            if (!it) {
+                if (ul.children().length && !ul.children().last().is('.tw-ctx-sep'))
+                    $('<li class="tw-ctx-sep" role="separator">').appendTo(ul);
+                return;
+            }
+            $('<li role="none">').append($('<a href="#" role="menuitem">').addClass(it[3] || '')
+                .append($('<span class="ti" aria-hidden="true">').addClass('ti-' + it[1]), $('<span>').text(it[0]))
+                .on('click', function(e) {
+                    if (it[2](this, e) !== true) // true: the action refilled the menu ("Переместить в…")
+                        menu.prop('hidden', true);
+                    return false;
+                })).appendTo(ul);
+        });
+        ul.children('.tw-ctx-sep').last().filter(':last-child').remove();
+        return ul.children().length > 0;
+    }
+
+    // at the pointer, kept inside the window
+    function ctx_open(menu, e) {
+        close_menus();
+        menu.prop('hidden', false);
+        var w = menu.outerWidth(), h = menu.outerHeight();
+        menu.css({
+            left: Math.max(8, Math.min(e.clientX, window.innerWidth - w - 8)),
+            top: e.clientY + h > window.innerHeight - 8 ? Math.max(8, e.clientY - h) : e.clientY
+        });
+    }
+
+    // right click on a message: the ticked set if the row is in it, otherwise that message alone (not opened)
+    function message_menu() {
+        var menu = $('<div id="tw-msg-menu" class="tw-menu tw-ctx" hidden><ul role="menu"></ul></div>').appendTo(document.body),
+            list = rcmail.message_list, last_event;
+
+        $('#messagelist').on('contextmenu', 'tbody tr', function(e) {
+            var uid = this.uid, sel, rows, read, flagged, items;
+            last_event = e;
+            if (!list || uid === undefined)
+                return;
+
+            if ($.inArray(String(uid), $.map(list.get_selection(), String)) < 0) {
+                TW.no_preview = true; // see msglist_get_preview: a right click selects without opening
+                setTimeout(function() { TW.no_preview = false; }, 1000);
+                list.select_row(uid, false, false);
+            }
+
+            sel = list.get_selection();
+            rows = $.map(sel, function(u) { return list.rows[u] ? $(list.rows[u].obj) : null; });
+            read = !rows.some(function(r) { return r.hasClass('unread'); });
+            flagged = rows.length && rows.every(function(r) { return r.hasClass('flagged'); });
+
+            items = sel.length == 1 ? [
+                [rcmail.gettext('reply'), 'reply', function() { rcmail.command('reply'); }],
+                [rcmail.gettext('replyall'), 'reply-all', function() { rcmail.command('reply-all'); }],
+                [rcmail.gettext('forward'), 'forward', function() { rcmail.command('forward'); }],
+                null
+            ] : [];
+            items.push(
+                [rcmail.gettext(read ? 'markunread' : 'markread'), read ? 'mail' : 'mail-open',
+                    function() { rcmail.command('mark', read ? 'unread' : 'read'); }],
+                [rcmail.gettext(flagged ? 'markunflagged' : 'markflagged'), 'bookmark',
+                    function() { rcmail.command('mark', flagged ? 'unflagged' : 'flagged'); }],
+                null,
+                // the folders replace the items in this menu (Roundcube's own selector is a toggling popover
+                // placed next to an element that this menu hides)
+                [rcmail.gettext('moveto'), 'folder', function() {
+                    var env = rcmail.env, folders = [];
+                    $.each(env.mailboxes_list || [], function(i, id) {
+                        var f = env.mailboxes[id] || {}, depth = env.delimiter ? id.split(env.delimiter).length - 1 : 0;
+                        if (id != env.mailbox && !f.virtual)
+                            folders.push([f.name || id, 'folder', function() { rcmail.move_messages(id); }, 'tw-ctx-depth' + Math.min(depth, 3)]);
+                    });
+                    ctx_fill(menu, folders);
+                    ctx_open(menu, last_event);
+                    return true; // keep the menu open
+                }]
+            );
+            // the plugins' own labels, when they are enabled here
+            if (rcmail.commands['plugin.archive'] !== undefined && rcmail.env.archive_folder)
+                items.push([rcmail.gettext('buttontext', 'archive'), 'archive', function() { rcmail.command('plugin.archive'); }]);
+            if (rcmail.commands['plugin.markasjunk.junk'] !== undefined)
+                items.push([rcmail.gettext('asjunk', 'markasjunk'), 'ban', function() { rcmail.command('plugin.markasjunk.junk'); }]);
+            items.push([rcmail.gettext('delete'), 'trash', function() { rcmail.command('delete'); }, 'tw-danger']);
+
+            ctx_fill(menu, items);
+            ctx_open(menu, e);
+            return false;
         });
     }
 
@@ -792,7 +1172,7 @@
             list.empty();
             $.each(items.slice(0, 500), function(i, c) {
                 $('<li tabindex="0">').data('c', c).attr('title', t('write_to') + ' ' + c[1])
-                    .append(avatar(c[0] || c[1]).addClass('tw-avatar-lg'),
+                    .append(avatar(c[0] || c[1], c[1]).addClass('tw-avatar-lg'),
                         $('<span class="tw-contact-text">').append(
                             $('<span class="tw-contact-name">').toggleClass('tw-muted', !c[0]).text(c[0] || t('no_name')),
                             $('<span class="tw-contact-email">').text(c[1])),
@@ -851,7 +1231,7 @@
                 return;
             var name = $.trim(td.text()), email = d.email || '', noname = !name || name == email;
             td.empty().append(
-                $('<span class="tw-c-name">').append(avatar(noname ? email : name).addClass('tw-avatar-md'),
+                $('<span class="tw-c-name">').append(avatar(noname ? email : name, email).addClass('tw-avatar-md'),
                     $('<span class="tw-contact-name">').toggleClass('tw-muted', noname).text(noname ? t('no_name') : name)),
                 $('<span class="tw-c-email">').text(email),
                 $('<span class="tw-c-phone tw-muted">').text(t('not_filled')));
@@ -1095,10 +1475,16 @@
         btn.attr('aria-expanded', 'true');
         return false;
     }
-    $(document).on('mousedown', function(e) {
+    // a press anywhere else closes them: capture phase, the message list stops mousedown from bubbling;
+    // a press inside a frame (the opened message) only blurs this window
+    document.addEventListener('mousedown', function(e) {
         if (!$(e.target).closest('.tw-menu, [data-tw-menu]').length)
             close_menus();
-    });
+    }, true);
+    $(window).on('blur', function() { setTimeout(function() {
+        if (document.activeElement && document.activeElement.tagName == 'IFRAME')
+            close_menus();
+    }, 0); });
     $(document).on('keydown', function(e) {
         if (e.key == 'Escape' && $('.tw-menu:not([hidden])').length) {
             close_menus();
@@ -1217,7 +1603,10 @@
     /* ----------------------------------------------------------------- message (preview frame) */
     function message() {
         var from = $('.header-summary .rcmContactAddress, .header-summary a').first();
-        $('.tw-msg-avatar').replaceWith(avatar(from.text() || from.attr('title')).addClass('tw-msg-avatar'));
+        // the address is in href="mailto:…" (no title here), the text is "Name <address>"
+        var email = decodeURIComponent((from.attr('href') || '').replace(/^mailto:/i, '').split('?')[0])
+            || from.attr('title') || (/<([^>]+)>/.exec(from.text()) || [])[1] || '';
+        $('.tw-msg-avatar').replaceWith(avatar(from.text() || from.attr('title'), email).addClass('tw-msg-avatar'));
     }
 
     /* ----------------------------------------------------------------- login */

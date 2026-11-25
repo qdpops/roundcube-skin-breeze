@@ -48,8 +48,9 @@
 			<roundcube:button command="checkmail" type="link" class="tw-btn tw-icon-only ti ti-refresh"
 				label="refresh" title="checkmail" innerclass="inner" />
 			<span class="tw-when-none">
-				<roundcube:button command="mark-all-read" type="link" class="tw-btn tw-muted ti ti-mail-open disabled" classAct="tw-btn tw-muted ti ti-mail-open"
-					label="markallread" title="markallread" innerclass="inner" />
+				<!-- in the trash only (body.tw-in-trash, breeze.js); Roundcube asks before purging -->
+				<roundcube:button command="purge" type="link" class="tw-btn tw-muted tw-purge ti ti-trash disabled" classAct="tw-btn tw-muted tw-purge ti ti-trash"
+					label="tw_folders.empty_trash" title="tw_folders.empty_trash" innerclass="inner" />
 			</span>
 			<span class="tw-when-selected">
 				<roundcube:button command="plugin.archive" type="link" class="tw-btn ti ti-archive disabled" classAct="tw-btn ti ti-archive"
@@ -67,14 +68,20 @@
 			</span>
 			<span class="tw-spacer"></span>
 			<span class="tw-pager">
-				<span id="tw-page" class="tw-page"></span>
+				<span class="tw-pagenum" id="tw-pagenum" hidden>
+					<input type="text" id="tw-page-input" inputmode="numeric" autocomplete="off" aria-label="<roundcube:label name="tw_folders.page" />" />
+					<span id="tw-page-of"></span>
+				</span>
 				<roundcube:button command="previouspage" type="link" class="tw-btn tw-icon-only ti ti-chevron-left disabled" classAct="tw-btn tw-icon-only ti ti-chevron-left"
 					title="previouspage" label="previous" innerclass="inner" />
 				<roundcube:button command="nextpage" type="link" class="tw-btn tw-icon-only ti ti-chevron-right disabled" classAct="tw-btn tw-icon-only ti ti-chevron-right"
 					title="nextpage" label="next" innerclass="inner" />
 				<roundcube:object name="messageCountDisplay" id="tw-count" class="tw-count" aria-live="polite" />
 			</span>
-			<roundcube:object name="listmenulink" class="tw-btn tw-icon-only ti ti-sliders" label="options" innerclass="inner" />
+			<span class="tw-sep"></span>
+			<a href="#filter" class="tw-btn tw-icon-only ti ti-filter" id="tw-filter-btn" data-tw-menu="tw-filter-menu" aria-haspopup="true" aria-expanded="false" title="<roundcube:label name="tw_folders.filter" />"><span class="inner"><roundcube:label name="tw_folders.filter" /></span></a>
+			<span class="tw-sep"></span>
+			<a href="#list-options" class="tw-btn tw-icon-only ti ti-sliders" data-tw-menu="tw-listopts-menu" aria-haspopup="true" aria-expanded="false" title="<roundcube:label name="listoptionstitle" />"><span class="inner"><roundcube:label name="listoptionstitle" /></span></a>
 		</div>
 	</div>
 	<roundcube:object name="searchform" id="mailsearchform" wrapper="searchbar menu"
@@ -122,6 +129,8 @@
 		<roundcube:object name="messages" id="messagelist" class="tw-msglist"
 			aria-labelledby="aria-label-messagelist" data-list="message_list" data-label-msg="listempty" />
 	</div>
+	<!-- back to the top of a scrolled list (breeze.js shows it) -->
+	<button type="button" class="tw-to-top ti ti-arrow-up" hidden title="<roundcube:label name="tw_folders.to_top" />"><span class="voice"><roundcube:label name="tw_folders.to_top" /></span></button>
 </div>
 
 <!-- opened message -->
@@ -179,6 +188,10 @@
 		<roundcube:button command="collapse-all" type="link-menuitem" label="collapse-all" class="expand none disabled" classAct="expand none active" />
 	</ul>
 </div>
+
+<!-- list bar dropdowns, filled by breeze.js -->
+<div id="tw-filter-menu" class="tw-menu tw-period" role="dialog" hidden></div>
+<div id="tw-listopts-menu" class="tw-menu tw-popform" role="dialog" hidden></div>
 
 <div id="listoptions-menu" class="popupmenu propform" role="dialog" aria-labelledby="aria-label-listoptions">
 	<h3 id="aria-label-listoptions" class="voice"><roundcube:label name="arialabelmessagelistoptions" /></h3>

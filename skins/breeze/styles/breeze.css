@@ -123,6 +123,11 @@ html.layout-large body.action-compose #layout > #layout-content,
 html.layout-normal body.action-compose #layout > #layout-content,
 html.layout-large body.action-get #layout > #layout-content,
 html.layout-normal body.action-get #layout > #layout-content { grid-column: 1 / -1; margin-left: 16px; }
+/* pages opened in their own window (attachment, "open in new window") have no top bar: no empty row for it */
+html.layout-large:not(.iframe) body:not(.task-login) #layout:not(:has(> #layout-menu)),
+html.layout-normal:not(.iframe) body:not(.task-login) #layout:not(:has(> #layout-menu)) { grid-template-rows: minmax(0, 1fr); }
+html.layout-large:not(.iframe) #layout:not(:has(> #layout-menu)) > #layout-content,
+html.layout-normal:not(.iframe) #layout:not(:has(> #layout-menu)) > #layout-content { grid-row: 1; margin-top: 16px; }
 
 /* Elastic hides panes per screen mode; on wide screens all three stay, the mailbox toggles list/message itself */
 html.layout-large #layout > .hidden,
@@ -187,10 +192,8 @@ body.tw-split #mailtoolbar .tw-back { display: none; }
 /* toolbars follow the width of their own pane (narrow message pane in split layouts): icons only, no labels */
 #layout-content, #layout-list { container-type: inline-size; }
 @container (max-width: 760px) {
-    #mailtoolbar .tw-btn:not(.tw-icon-only) .inner,
-    .tw-listbar .tw-btn:not(.tw-icon-only) .inner { display: none; }
-    #mailtoolbar .tw-btn:not(.tw-icon-only),
-    .tw-listbar .tw-btn:not(.tw-icon-only) { width: 32px; padding: 0; justify-content: center; }
+    #mailtoolbar .tw-btn:not(.tw-icon-only) .inner { display: none; }
+    #mailtoolbar .tw-btn:not(.tw-icon-only) { width: 32px; padding: 0; justify-content: center; }
 }
 @container (max-width: 480px) {
     #mailtoolbar .tw-sep, #mailtoolbar .ti-tag, #mailtoolbar .ti-folder { display: none; }
@@ -256,15 +259,11 @@ body.tw-resizing iframe { pointer-events: none; } /* frames would swallow mousem
 .tw-chip-image { background-color: #f5a300; -webkit-mask-image: url(../images/icons/image.svg); mask-image: url(../images/icons/image.svg); }
 .tw-chip-archive { background-color: #8b5cf6; -webkit-mask-image: url(../images/icons/archive.svg); mask-image: url(../images/icons/archive.svg); }
 .tw-chip-doc { background-color: #317bff; }
-/* two-line rows (narrow list, "письмо справа"): chips under the subject */
 /* one-line rows with chips: the first line keeps the 44px height of the other rows */
 html.layout-large body:not(.tw-preview-right) #messagelist > tbody > tr:has(.tw-chips),
 html.layout-normal body:not(.tw-preview-right) #messagelist > tbody > tr:has(.tw-chips) { align-content: flex-start; }
 html.layout-large body:not(.tw-preview-right) #messagelist > tbody > tr:has(.tw-chips) span.subject,
 html.layout-normal body:not(.tw-preview-right) #messagelist > tbody > tr:has(.tw-chips) span.subject { height: 44px; }
-body.tw-preview-right #messagelist .tw-chips { padding-left: 92px; margin-top: 2px; }
-html.layout-small #messagelist .tw-chips,
-html.layout-phone #messagelist .tw-chips { padding-left: 34px; margin-top: 2px; }
 
 /* Elastic's phone-only header buttons and column resizers */
 html.layout-large #layout .header > a.button.task-menu-button,
@@ -588,8 +587,65 @@ body:not(.tw-has-selection) .tw-when-selected,
 body.tw-has-selection .tw-when-none { display: none; }
 .tw-when-selected, .tw-when-none { display: inline-flex; align-items: center; gap: 2px; }
 .tw-pager { display: inline-flex; align-items: center; gap: 2px; margin-left: 8px; }
-.tw-page { color: var(--tw-text-2); font-size: 13px; margin-right: 6px; white-space: nowrap; }
+.tw-pagenum { display: inline-flex; align-items: center; gap: 6px; margin-right: 4px; color: var(--tw-muted); font-size: 13px; font-weight: 500; white-space: nowrap; }
+.tw-pagenum[hidden] { display: none; }
+#tw-page-input {
+    box-sizing: border-box;
+    width: 34px;
+    height: 28px;
+    margin: 0;
+    padding: 0 4px;
+    border: 1px solid var(--tw-input);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--tw-text);
+    font: inherit;
+    font-weight: 600;
+    text-align: center;
+    outline: 0;
+}
+#tw-page-input:focus { border-color: var(--tw-accent); }
+/* "N писем ▾", "по 100 ▾": label, then a small chevron */
+.tw-btn.tw-drop { gap: 2px; padding: 0 6px 0 8px; font-size: 13px; font-weight: 600; }
+html body .tw-btn.tw-drop::before { width: 16px !important; height: 16px !important; color: var(--tw-muted); }
+#tw-filter-btn.tw-active { background: var(--tw-accent-light); color: var(--tw-accent) !important; }
+.tw-listbar .tw-sep { margin: 0 4px; }
+/* list bar dropdowns ("N писем", "по 100", "Период"): one look. Rows 36px, 14px/500, 12px side padding, 10px corners;
+   the current choice is highlighted, as in Timeweb's "Период" */
+.tw-menu.tw-pick,
+.tw-menu.tw-period { border-radius: 16px; }
+.tw-menu.tw-pick { min-width: 132px; width: max-content; padding: 8px; }
+.tw-menu.tw-pick li > a,
+.tw-period .tw-period-years li > a {
+    justify-content: space-between;
+    gap: 24px;
+    min-height: 36px;
+    padding: 0 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+}
+.tw-pick .tw-pick-mark { display: none; }
+.tw-menu.tw-pick a[aria-checked="true"],
+.tw-period .tw-period-years a[aria-checked="true"] { background: var(--tw-accent-light); color: var(--tw-accent) !important; }
+/* "Период" (the funnel): sort order, then messages per year with counts */
+.tw-menu.tw-period { width: 264px; padding: 18px 20px 20px; overflow-x: hidden; }
+.tw-period-head { display: flex; align-items: center; justify-content: space-between; margin: 0 -4px 4px 0; font-size: 18px; font-weight: 700; color: var(--tw-text); }
+.tw-period-head .tw-btn { width: 28px; height: 28px; border-radius: 50%; background: var(--tw-hover); color: var(--tw-muted) !important; }
+html body .tw-period-head .ti::before { width: 14px !important; height: 14px !important; }
+.tw-period-label { margin: 16px 0 8px; color: var(--tw-muted); font-size: 14px; }
+.tw-radio { display: flex; align-items: center; gap: 10px; min-height: 32px; margin: 0; font-size: 14px; font-weight: 500; color: var(--tw-text); cursor: pointer; }
+.tw-radio input { width: 18px; height: 18px; margin: 0; accent-color: var(--tw-accent); cursor: pointer; }
+.tw-period-years { margin: 0 !important; }
+.tw-period-n { color: var(--tw-muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.tw-period .tw-period-years a[aria-checked="true"] .tw-period-n { color: inherit; }
+.tw-period-wait { display: flex; align-items: center; min-height: 36px; padding: 0 12px; color: var(--tw-muted); font-size: 14px; }
 .tw-count { display: none; }
+/* the list bar stays on one line: breeze.js measures it and drops the button words (tw-tight), then the page
+   field (tw-tighter), only when they don't fit */
+.tw-listbar.tw-tight .tw-btn:not(.tw-icon-only):not(.tw-drop) .inner { display: none; }
+.tw-listbar.tw-tight .tw-btn:not(.tw-icon-only):not(.tw-drop) { width: 32px; padding: 0; justify-content: center; }
+.tw-listbar.tw-tighter .tw-pagenum { display: none; }
 
 /* ============================================================ message list */
 #messagelist-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 12px 12px; }
@@ -613,12 +669,10 @@ body.tw-has-selection .tw-when-none { display: none; }
    checkbox, flag, avatar, sender, subject, attachment, date */
 #messagelist > tbody > tr > td { display: contents; border: 0; padding: 0; background: none; }
 #messagelist > tbody > tr > td.threads { display: none; }
-/* the checkbox cell is a real box again: a 40px-wide, full-height hit area (Roundcube toggles the checkbox
-   on a click anywhere in td.selection); the negative margins keep the 16px layout slot */
-#messagelist td.selection { order: 0; display: flex; align-self: stretch; align-items: center; justify-content: center; width: 40px; margin: 0 -12px; cursor: pointer; }
-#messagelist td.selection input { order: 0; flex: none; }
+/* no checkbox column: the avatar ticks the row (breeze.js), its checkbox stays hidden for Roundcube */
+#messagelist td.selection { display: none; }
+#messagelist .tw-avatar { order: 0; width: 28px; height: 28px; font-size: 12px; line-height: 28px; cursor: pointer; }
 #messagelist span.flag { order: 1; flex: none; display: inline-flex; width: 18px; height: 18px; }
-#messagelist .tw-avatar { order: 2; }
 #messagelist span.fromto { order: 3; flex: 0 0 180px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 14px; color: var(--tw-text); }
 #messagelist span.subject { order: 4; flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px; margin: 0; overflow: hidden; white-space: nowrap; }
 #messagelist span.subject a { overflow: hidden; text-overflow: ellipsis; color: var(--tw-text) !important; font-size: 14px; text-decoration: none !important; }
@@ -1781,40 +1835,22 @@ html.layout-phone .tw-c-foot .ti-external { display: none; }
 .floating-action-buttons a.button .inner { display: none; }
 html.layout-small #messagelist-header .tw-listbar,
 html.layout-phone #messagelist-header .tw-listbar { flex: 0 0 100%; order: 5; height: 44px; overflow-x: auto; }
-html.layout-small .tw-listbar .tw-btn:not(.tw-icon-only) .inner,
-html.layout-phone .tw-listbar .tw-btn:not(.tw-icon-only) .inner { display: none; }
-html.layout-small .tw-listbar .tw-btn:not(.tw-icon-only),
-html.layout-phone .tw-listbar .tw-btn:not(.tw-icon-only) { width: 32px; padding: 0; justify-content: center; }
+html.layout-small .tw-listbar .tw-btn:not(.tw-icon-only):not(.tw-drop) .inner,
+html.layout-phone .tw-listbar .tw-btn:not(.tw-icon-only):not(.tw-drop) .inner { display: none; }
+html.layout-small .tw-listbar .tw-btn:not(.tw-icon-only):not(.tw-drop),
+html.layout-phone .tw-listbar .tw-btn:not(.tw-icon-only):not(.tw-drop) { width: 32px; padding: 0; justify-content: center; }
 html.layout-small #layout-list > .searchbar,
 html.layout-phone #layout-list > .searchbar { margin: 8px 12px; padding: 0 8px; height: 40px; background: var(--tw-bg); border: 0; border-radius: 8px; }
 html.layout-small #layout-list > .searchbar input,
 html.layout-phone #layout-list > .searchbar input { background: none; border: 0; font-size: 14px; }
 
-/* message rows on narrow screens: two lines (avatar, sender, date / subject) */
+/* message list on narrow screens (rows: see "three-line rows" below) */
 html.layout-small #messagelist-content,
 html.layout-phone #messagelist-content { padding: 0 4px 80px; }
-html.layout-small #messagelist > tbody > tr,
-html.layout-phone #messagelist > tbody > tr { flex-wrap: wrap; row-gap: 2px; padding-top: calc(var(--tw-label) + 8px); padding-bottom: 8px; }
-html.layout-small #messagelist td.selection,
-html.layout-phone #messagelist td.selection,
-html.layout-small #messagelist span.flag,
-html.layout-phone #messagelist span.flag { display: none; }
-html.layout-small #messagelist span.fromto,
-html.layout-phone #messagelist span.fromto { flex: 1 1 0; }
-html.layout-small #messagelist span.subject,
-html.layout-phone #messagelist span.subject { order: 7; flex: 0 0 100%; padding-left: 34px; box-sizing: border-box; }
 html.layout-small #messagelist > tbody > tr[data-tw-group]::before,
 html.layout-phone #messagelist > tbody > tr[data-tw-group]::before { top: 10px; }
 
-/* "Письмо справа": narrow list, two-line rows; subject starts under the sender
-   (checkbox 16 + flag 18 + avatar 22 + three 12px gaps = 92px) */
-body.tw-preview-right #messagelist > tbody > tr { flex-wrap: wrap; row-gap: 2px; padding-top: calc(var(--tw-label) + 8px); padding-bottom: 8px; }
-body.tw-preview-right #messagelist span.fromto { flex: 1 1 0; }
-body.tw-preview-right #messagelist span.subject { order: 7; flex: 0 0 100%; padding-left: 92px; box-sizing: border-box; }
 body.tw-preview-right #messagelist > tbody > tr[data-tw-group]::before { top: 10px; }
-body.tw-preview-right .tw-listbar .tw-btn:not(.tw-icon-only) .inner { display: none; }
-body.tw-preview-right .tw-listbar .tw-btn:not(.tw-icon-only) { width: 32px; padding: 0; justify-content: center; }
-body.tw-preview-right .tw-pager .tw-page { display: none; }
 
 /* opened message on phones */
 html.layout-phone .tw-message,
@@ -2017,10 +2053,10 @@ select.tw-text-input { appearance: auto; }
 #mailboxlist li.mailbox:hover > .tw-folder-more,
 .tw-folder-more:focus-visible,
 .tw-folder-more[aria-expanded="true"] { opacity: 1; }
-/* the counter gives way to the button */
-#mailboxlist li.mailbox:hover > a .unreadcount { visibility: hidden; }
+/* the counter stays, moved left of the button */
+#mailboxlist li.mailbox:has(> .tw-folder-more):is(:hover, :focus-within) > a { padding-right: 40px; }
 /* touch screens have no hover */
-@media (hover: none) { .tw-folder-more { opacity: 1; } #mailboxlist li.mailbox > a .unreadcount { margin-right: 4px; } }
+@media (hover: none) { .tw-folder-more { opacity: 1; } #mailboxlist li.mailbox:has(> .tw-folder-more) > a { padding-right: 40px; } }
 .tw-menu li > a.tw-danger { color: var(--tw-red) !important; }
 
 /* ============================================================ folder rules (edit-folder dialog, Settings > Фильтры) */
@@ -2492,3 +2528,214 @@ body.task-addressbook #layout-list table.listing td.selection { overflow: visibl
 /* new extra mailbox (ident_switch): required fields, the error state */
 body.task-settings tr.tw-required td.title label::after { content: " *"; color: var(--tw-red); }
 body.task-settings tr.tw-invalid input { border-color: var(--tw-red) !important; box-shadow: 0 0 0 3px rgba(240, 68, 91, .15) !important; }
+
+/* list options (the sliders button): a panel next to the button, like "Период" */
+#tw-listopts-menu.tw-menu { width: 340px; padding: 10px 16px 10px 20px; border-radius: 16px; }
+.tw-opt input.tw-switch {
+    position: relative;
+    flex: none;
+    width: 34px;
+    height: 20px;
+    margin: 0;
+    border-radius: 10px;
+    background: #d5d8e0;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: background .15s;
+}
+.tw-opt input.tw-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left .15s; }
+.tw-opt input.tw-switch:checked { background: var(--tw-accent); }
+.tw-opt input.tw-switch:checked::after { left: 17px; }
+
+/* ============================================================ avatars: sender logos and the tick
+   breeze.js puts the sender's logo (tw_folders, plugin.tw-logo) over the letter once it has loaded */
+.tw-avatar { position: relative; overflow: hidden; }
+.tw-avatar > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #fff; opacity: 0; }
+.tw-avatar.tw-has-logo { background-color: #fff !important; box-shadow: inset 0 0 0 1px var(--tw-line); }
+.tw-avatar.tw-has-logo > img { opacity: 1; }
+/* in the list the avatar is the checkbox: hover hint, a tick on checked rows */
+#messagelist .tw-avatar:hover { box-shadow: 0 0 0 3px var(--tw-accent-light); }
+#messagelist > tbody > tr:has(td.selection input:checked) .tw-avatar::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--tw-accent);
+}
+#messagelist > tbody > tr:has(td.selection input:checked) .tw-avatar::before {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    inset: 24%;
+    background: #fff;
+    -webkit-mask: url(../images/icons/check.svg) center / contain no-repeat;
+    mask: url(../images/icons/check.svg) center / contain no-repeat;
+}
+/* the start of the text (tw_folders, plugin.tw-snippets): three-line rows only */
+#messagelist .tw-snippet { display: none; }
+
+/* ============================================================ three-line rows (message on the right, phones), as in Timeweb:
+   avatar | sender         date
+          | subject        flag
+          | start of the text
+          | attachment chips */
+:is(body.tw-preview-right, html.layout-small body, html.layout-phone body) #messagelist > tbody > tr {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 2px;
+    align-items: center;
+    min-height: 0;
+    padding: calc(var(--tw-label) + 12px) 12px 12px;
+    border-bottom: 1px solid var(--tw-line);
+}
+:is(body.tw-preview-right, html.layout-small body, html.layout-phone body) #messagelist > tbody > tr::after { inset: var(--tw-label) 0 0 0; border-radius: 0; }
+:is(body.tw-preview-right, html.layout-small body, html.layout-phone body) #messagelist .tw-avatar {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    align-self: start;
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+    line-height: 40px;
+}
+:is(body.tw-preview-right, html.layout-small body, html.layout-phone body) #messagelist span.fromto { grid-column: 2; grid-row: 1; flex: none; }
+:is(body.tw-preview-right, html.layout-small body, html.layout-phone body) #messagelist span.date { grid-column: 3; grid-row: 1; justify-self: end; }
+:is(body.tw-preview-right, html.layout-small body, html.layout-phone body) #messagelist span.subject { grid-column: 2; grid-row: 2; height: auto; padding: 0; }
+:is(body.tw-preview-right, html.layout-small body, html.layout-phone body) #messagelist span.flag { grid-column: 3; grid-row: 2; justify-self: end; visibility: hidden; }
+:is(body.tw-preview-right, html.layout-small body, html.layout-phone body) #messagelist > tbody > tr:is(:hover, .selected, .flagged) span.flag { visibility: visible; }
+:is(body.tw-preview-right, html.layout-small body, html.layout-phone body) #messagelist span.attachment { display: none; }
+:is(body.tw-preview-right, html.layout-small body, html.layout-phone body) #messagelist .tw-snippet {
+    display: block;
+    grid-column: 2 / 4;
+    grid-row: 3;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--tw-muted);
+    font-size: 14px;
+    line-height: 20px;
+    height: 20px; /* reserved while empty: the text arrives after the list, the row must not grow then */
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    transition: opacity .2s;
+}
+:is(body.tw-preview-right, html.layout-small body, html.layout-phone body) #messagelist .tw-snippet:empty { opacity: 0; }
+:is(body.tw-preview-right, html.layout-small body, html.layout-phone body) #messagelist .tw-chips { grid-column: 2 / 4; grid-row: 4; padding: 0; margin-top: 4px; }
+
+/* read mark buttons in "mark as unread" mode (breeze.js, tw-unread-mode): closed envelope, always clickable */
+.tw-listbar.tw-unread-mode .ti-mail-open { --ti: url(../images/icons/mail.svg); }
+.tw-listbar.tw-unread-mode .tw-btn.ti-mail-open.disabled { opacity: 1; pointer-events: auto; }
+
+/* the trash: "Очистить корзину" (nothing else is there when no message is chosen) */
+.tw-listbar .tw-purge { display: none; }
+body.tw-in-trash .tw-listbar .tw-purge { display: inline-flex; }
+
+/* right-click menus (messages, folders), in the look of the list bar dropdowns */
+.tw-menu.tw-ctx { min-width: 240px; padding: 8px; border-radius: 16px; }
+.tw-menu.tw-ctx li > a { gap: 12px; min-height: 38px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 500; }
+.tw-menu.tw-ctx li > a .ti { color: var(--tw-muted); }
+.tw-menu.tw-ctx li > a.tw-danger .ti { color: inherit; }
+.tw-menu.tw-ctx li.tw-ctx-sep { height: 1px; margin: 6px 8px; background: var(--tw-line); }
+.tw-menu.tw-ctx li > a.tw-ctx-depth1 { padding-left: 30px; }
+.tw-menu.tw-ctx li > a.tw-ctx-depth2 { padding-left: 46px; }
+.tw-menu.tw-ctx li > a.tw-ctx-depth3 { padding-left: 62px; }
+
+/* search box: a text cursor only inside the input; its buttons (unread, options, clear) and the gaps around them
+   are not a place to type */
+.searchbar { cursor: default; user-select: none; }
+.searchbar a.button, .searchbar a.button * { cursor: pointer; }
+.searchbar form input { cursor: text; user-select: text; }
+/* list options panel: labels on one line */
+#tw-listopts-menu .tw-opt > span { white-space: nowrap; }
+/* list options panel, in the look of "Период": no lines between rows, light compact selects */
+#tw-listopts-menu .tw-opt { min-height: 40px; }
+#tw-listopts-menu .tw-opt + .tw-opt { border-top: 0; }
+#tw-listopts-menu .tw-opt select {
+    flex: none;
+    width: auto;
+    max-width: 170px;
+    height: 32px;
+    margin: 0;
+    padding: 0 30px 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--tw-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2383899f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center / 14px;
+    -webkit-appearance: none;
+    appearance: none;
+    color: var(--tw-text);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+#tw-listopts-menu .tw-opt select:hover { background-color: var(--tw-hover); }
+#tw-listopts-menu .tw-opt select:focus-visible { outline: 2px solid var(--tw-accent-light); }
+
+/* "наверх" over the bottom right of a scrolled message list */
+#layout-list { position: relative; }
+.tw-to-top {
+    position: absolute;
+    z-index: 5;
+    right: 24px;
+    bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--tw-line);
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(5, 12, 38, .12);
+    color: var(--tw-text);
+    cursor: pointer;
+}
+.tw-to-top[hidden] { display: none; }
+.tw-to-top:hover { background: var(--tw-hover); }
+/* phones: above the floating "compose" button */
+html.layout-phone .tw-to-top,
+html.layout-small .tw-to-top { right: 16px; bottom: 96px; }
+
+/* ============================================================ one bar over list and message ("Письмо справа",
+   wide screens, Timeweb): breeze.js moves the list header into #layout (.tw-unibar-host) */
+html.layout-large body.tw-unibar #layout,
+html.layout-normal body.tw-unibar #layout { grid-template-rows: var(--tw-top) auto minmax(0, 1fr); }
+html.layout-large body.tw-unibar #layout > #layout-sidebar,
+html.layout-normal body.tw-unibar #layout > #layout-sidebar { grid-row: 2 / 4; }
+html.layout-large body.tw-unibar #layout > #layout-list,
+html.layout-normal body.tw-unibar #layout > #layout-list,
+html.layout-large body.tw-unibar #layout > #layout-content,
+html.layout-normal body.tw-unibar #layout > #layout-content { grid-row: 3; }
+html.layout-large body.tw-unibar #layout > .tw-unibar-host,
+html.layout-normal body.tw-unibar #layout > .tw-unibar-host {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    height: 56px;
+    margin: 0 16px 12px 0;
+    padding: 0 12px;
+    background: var(--tw-card);
+    border-radius: var(--tw-radius);
+    container-type: inline-size;
+}
+body.tw-unibar .tw-unibar-host .tw-listbar { flex: 1 1 auto; height: 100%; }
+body.tw-unibar .tw-unibar-host > .header-title,
+body.tw-unibar .tw-unibar-host > a.button { display: none !important; }
+/* the message has no bar of its own here: its actions are in the one bar */
+html.layout-large body.tw-unibar #layout > #layout-content > .header,
+html.layout-normal body.tw-unibar #layout > #layout-content > .header { display: none !important; }
+/* the words stay: the bar is wide (breeze.js still drops them when it doesn't fit) */
+body.tw-unibar .tw-listbar .tw-btn:not(.tw-icon-only):not(.tw-drop) .inner { display: inline; }
+body.tw-unibar .tw-listbar .tw-btn:not(.tw-icon-only):not(.tw-drop) { width: auto; padding: 0 8px; }
+body.tw-unibar .tw-listbar.tw-tight .tw-btn:not(.tw-icon-only):not(.tw-drop) .inner { display: none; }
+body.tw-unibar .tw-listbar.tw-tight .tw-btn:not(.tw-icon-only):not(.tw-drop) { width: 32px; padding: 0; }
+
+/* the bookmark in "remove the flag" mode (breeze.js, body.tw-flag-mode): filled, in the flag colour */
+body.tw-flag-mode .tw-listbar .tw-when-selected .ti-bookmark,
+body.tw-flag-mode #mailtoolbar .ti-bookmark { --ti: url(../images/icons/bookmark-fill.svg); color: var(--tw-red) !important; }

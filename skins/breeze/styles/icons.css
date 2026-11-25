@@ -24,6 +24,7 @@
 .ti-chevron-right { --ti: url(../images/icons/chevron-right.svg); }
 .ti-chevron-down { --ti: url(../images/icons/chevron-down.svg); }
 .ti-arrow-left { --ti: url(../images/icons/arrow-left.svg); }
+.ti-arrow-up { --ti: url(../images/icons/arrow-up.svg); }
 .ti-close { --ti: url(../images/icons/close.svg); }
 .ti-minus { --ti: url(../images/icons/minus.svg); }
 .ti-maximize { --ti: url(../images/icons/maximize.svg); }
@@ -46,6 +47,7 @@
 .ti-download { --ti: url(../images/icons/download.svg); }
 .ti-user { --ti: url(../images/icons/user.svg); }
 .ti-user-plus { --ti: url(../images/icons/user-plus.svg); }
+.ti-upload { --ti: url(../images/icons/upload.svg); }
 .ti-lock { --ti: url(../images/icons/lock.svg); }
 .ti-message { --ti: url(../images/icons/message.svg); }
 .ti-id-card { --ti: url(../images/icons/id-card.svg); }
@@ -56,4 +58,3 @@
 .ti-save { --ti: url(../images/icons/save.svg); }
 .ti-external { --ti: url(../images/icons/external.svg); }
 .ti-code { --ti: url(../images/icons/code.svg); }
-.ti-upload { --ti: url(../images/icons/upload.svg); }
