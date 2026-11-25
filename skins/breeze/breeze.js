@@ -123,6 +123,24 @@
                 && !e.ctrlKey && !e.shiftKey && !e.metaKey;
         }, true); // capture: list.js stops propagation
 
+        // while messages are checked, a click anywhere on a row ticks / unticks it instead of opening it and
+        // dropping the checked set (a near miss of a checkbox); the flag and attachment chips keep their clicks
+        function row_toggle(e) {
+            var t = $(e.target), cb = t.closest('tbody tr').find('td.selection input');
+            if (!cb.length || t.closest('td.selection, td.flags, .tw-chips').length
+                || !$('#messagelist td.selection input:checked').length)
+                return;
+            e.stopPropagation();
+            e.preventDefault();
+            by_checkbox = true; // set by the listener above for this press: treat it as a checkbox click
+            clicked = false;
+            if (e.type == 'click')
+                cb.prop('checked', !cb.prop('checked')).change(); // list.js: select_row with CONTROL_KEY
+        }
+        $.each(['mousedown', 'mouseup', 'click', 'dblclick'], function(i, type) {
+            document.getElementById('messagelist').addEventListener(type, row_toggle, true);
+        });
+
         var get_preview = rcmail.msglist_get_preview;
         rcmail.msglist_get_preview = function() {
             // with the list in view (split layouts, phones) arrows preview as usual; full-width list opens by click only
@@ -1034,7 +1052,7 @@
         if (rc)
             rc.compose_skip_unsavedcheck = true;
         pending_close = false;
-        panel.prop('hidden', true).removeClass('tw-min tw-max');
+        panel.prop('hidden', true).removeClass('tw-min tw-max tw-moved tw-max-moved');
         frame.attr('src', 'about:blank');
     };
 
@@ -1133,6 +1151,25 @@
         return false;
     });
     $(document).on('click', '#tw-compose.tw-min .tw-compose-head', function() { panel.removeClass('tw-min'); });
+
+    // drag the panel by its header (wide screens, normal and maximized sizes, each keeps its own place
+    // until the panel closes)
+    $(document).on('mousedown', '#tw-compose:not(.tw-min) .tw-compose-head', function(e) {
+        if (e.button || !wide() || $(e.target).closest('[data-tw-compose], a, button').length)
+            return;
+        var box = panel[0].getBoundingClientRect(), dx = e.clientX - box.left, dy = e.clientY - box.top,
+            max = panel.hasClass('tw-max'), css = {};
+        panel.addClass('tw-dragging'); // the frame would swallow mousemove while the pointer is over it
+        $(document).on('mousemove.twdrag', function(ev) {
+            css[max ? '--tw-mx' : '--tw-x'] = Math.max(0, Math.min(ev.clientX - dx, window.innerWidth - box.width)) + 'px';
+            css[max ? '--tw-my' : '--tw-y'] = Math.max(0, Math.min(ev.clientY - dy, window.innerHeight - box.height)) + 'px';
+            panel.addClass(max ? 'tw-max-moved' : 'tw-moved').css(css);
+        }).on('mouseup.twdrag', function() {
+            $(document).off('.twdrag');
+            panel.removeClass('tw-dragging');
+        });
+        return false;
+    });
 
     /* ----------------------------------------------------------------- compose (inside the panel frame) */
     function compose() {

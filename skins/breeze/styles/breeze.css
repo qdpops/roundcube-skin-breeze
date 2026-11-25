@@ -144,6 +144,18 @@ html.layout-normal #layout > #layout-content {
     background: var(--tw-card);
     overflow: hidden;
 }
+/* scrollbars inside the cards: no grey track or arrow buttons (they squared off the card's corners and left
+   a step under the toolbar), a thin rounded thumb kept clear of the corners */
+#layout * { scrollbar-width: thin; scrollbar-color: #d5d8e0 transparent; }
+@supports selector(::-webkit-scrollbar) {
+    #layout * { scrollbar-width: auto; scrollbar-color: auto; } /* Chrome 121+ would ignore the ::-webkit rules otherwise */
+    #layout ::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+    #layout ::-webkit-scrollbar-track { background: transparent; margin: 8px 0; }
+    #layout ::-webkit-scrollbar-thumb { background: #d5d8e0; border: 3px solid transparent; border-radius: 8px; background-clip: padding-box; }
+    #layout ::-webkit-scrollbar-thumb:hover { background-color: var(--tw-faint); }
+    #layout ::-webkit-scrollbar-button,
+    #layout ::-webkit-scrollbar-corner { display: none; background: transparent; }
+}
 /* "Не разделять": the message replaces the list */
 html.layout-large body.tw-mailbox:not(.tw-split) #layout > #layout-content,
 html.layout-normal body.tw-mailbox:not(.tw-split) #layout > #layout-content { display: none !important; }
@@ -601,7 +613,9 @@ body.tw-has-selection .tw-when-none { display: none; }
    checkbox, flag, avatar, sender, subject, attachment, date */
 #messagelist > tbody > tr > td { display: contents; border: 0; padding: 0; background: none; }
 #messagelist > tbody > tr > td.threads { display: none; }
-#messagelist td.selection { order: 0; }
+/* the checkbox cell is a real box again: a 40px-wide, full-height hit area (Roundcube toggles the checkbox
+   on a click anywhere in td.selection); the negative margins keep the 16px layout slot */
+#messagelist td.selection { order: 0; display: flex; align-self: stretch; align-items: center; justify-content: center; width: 40px; margin: 0 -12px; cursor: pointer; }
 #messagelist td.selection input { order: 0; flex: none; }
 #messagelist span.flag { order: 1; flex: none; display: inline-flex; width: 18px; height: 18px; }
 #messagelist .tw-avatar { order: 2; }
@@ -739,27 +753,48 @@ body.action-preview, body.action-show { background: #fff; }
     position: fixed;
     z-index: 1000;
     right: 24px;
-    bottom: 0;
+    bottom: 16px; /* floats above the page edge: a visible border all round */
     width: 460px;
-    height: min(760px, calc(100vh - 80px));
+    height: min(760px, calc(100vh - 96px));
     display: flex;
     flex-direction: column;
     background: var(--tw-bg);
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
+    border: 1px solid var(--tw-line);
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(10, 27, 57, .18);
     overflow: hidden;
 }
 .tw-compose[hidden] { display: none; }
 .tw-compose.tw-max { right: 50%; bottom: 50%; transform: translate(50%, 50%); width: min(1100px, calc(100vw - 48px)); height: calc(100vh - 48px); border-radius: 16px; }
-.tw-compose.tw-min { height: 52px; width: 320px; cursor: pointer; }
+.tw-compose.tw-min { height: 64px; width: 320px; cursor: pointer; }
+/* dragged by the header (breeze.js): wide screens and the normal size only; clamp keeps it on screen after a resize */
+.tw-compose-head { user-select: none; }
+html.layout-large .tw-compose:not(.tw-min) .tw-compose-head,
+html.layout-normal .tw-compose:not(.tw-min) .tw-compose-head { cursor: move; }
+html.layout-large .tw-compose.tw-max.tw-max-moved,
+html.layout-normal .tw-compose.tw-max.tw-max-moved {
+    left: clamp(0px, var(--tw-mx), calc(100vw - min(1100px, calc(100vw - 48px))));
+    top: clamp(0px, var(--tw-my), 48px);
+    right: auto;
+    bottom: auto;
+    transform: none;
+}
+html.layout-large .tw-compose.tw-moved:not(.tw-min):not(.tw-max),
+html.layout-normal .tw-compose.tw-moved:not(.tw-min):not(.tw-max) {
+    left: clamp(0px, var(--tw-x), calc(100vw - 460px));
+    top: clamp(0px, var(--tw-y), calc(100vh - min(760px, calc(100vh - 96px))));
+    right: auto;
+    bottom: auto;
+}
+.tw-compose.tw-dragging iframe { pointer-events: none; }
 .tw-compose.tw-min iframe { visibility: hidden; }
-.tw-compose-head { display: flex; align-items: center; gap: 2px; flex: none; height: 52px; padding: 0 10px 0 16px; }
-.tw-compose-title { flex: 1 1 auto; font-size: 17px; font-weight: 700; color: var(--tw-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tw-compose-head { display: flex; align-items: center; gap: 2px; flex: none; height: 64px; padding: 4px 14px 0 20px; }
+.tw-compose-title { flex: 1 1 auto; font-size: 18px; font-weight: 700; color: var(--tw-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tw-compose iframe { flex: 1 1 auto; width: 100%; border: 0; background: var(--tw-bg); }
 html.layout-small .tw-compose,
 html.layout-phone .tw-compose,
 html.layout-small .tw-compose.tw-max,
-html.layout-phone .tw-compose.tw-max { inset: 0; transform: none; width: auto; height: auto; border-radius: 0; }
+html.layout-phone .tw-compose.tw-max { inset: 0; transform: none; width: auto; height: auto; border: 0; border-radius: 0; }
 html.layout-small .tw-compose [data-tw-compose="max"],
 html.layout-phone .tw-compose [data-tw-compose="max"],
 html.layout-small .tw-compose [data-tw-compose="min"],
@@ -769,18 +804,18 @@ html.layout-phone .tw-compose [data-tw-compose="min"] { display: none; }
 body.action-compose { background: var(--tw-bg); }
 body.action-compose.iframe #layout-content,
 .tw-composer { display: flex !important; flex-direction: column; height: 100%; background: var(--tw-bg); border: 0; }
-.tw-c-content { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 0 16px; overflow-y: auto; }
+.tw-c-content { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 4px 20px 0; overflow-y: auto; }
 .tw-c-form { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; margin: 0; padding: 0; }
-.tw-c-fields .compose-headers { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.tw-c-fields .compose-headers { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
 .tw-c-row {
     display: flex;
     align-items: center;
     gap: 6px;
-    min-height: 34px;
+    min-height: 38px;
     padding: 0 6px 0 12px;
     background: #fff;
     border: 1px solid var(--tw-input);
-    border-radius: 10px;
+    border-radius: 12px;
 }
 .tw-c-row.hidden { display: none; }
 .tw-c-row:focus-within { border-color: var(--tw-accent); }
@@ -818,7 +853,7 @@ body.action-compose.iframe #layout-content,
 .tw-c-row .recipient-input { min-height: 32px; padding: 0 !important; }
 .tw-c-row ::placeholder { color: var(--tw-faint); }
 .tw-c-row .recipient-input li.recipient ~ li.input input::placeholder { color: transparent; }
-.tw-c-body { flex: 1 1 auto; min-height: 240px; display: flex; flex-direction: column; background: #fff; border: 1px solid var(--tw-input); border-radius: 10px; overflow: hidden; }
+.tw-c-body { flex: 1 1 auto; min-height: 240px; display: flex; flex-direction: column; background: #fff; border: 1px solid var(--tw-input); border-radius: 12px; overflow: hidden; }
 .tw-c-body textarea#composebody { flex: 1 1 auto; border: 0; border-radius: 0; resize: none; padding: 12px; font-size: 14px; }
 .tw-c-body .tox-tinymce { flex: 1 1 auto; border: 0 !important; border-radius: 0 !important; }
 .tw-c-body .tox .tox-toolbar,
@@ -838,7 +873,7 @@ body.action-compose.iframe #layout-content,
 .tw-c-body .tox-tinymce { height: auto !important; min-height: 220px; }
 .tw-c-attachments .attachmentslist { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
 .tw-c-attachments .attachmentslist li { margin: 0; padding: 4px 8px; border: 1px solid var(--tw-line); border-radius: 8px; background: #fff; font-size: 13px; }
-.tw-c-foot { display: flex; align-items: center; gap: 8px; flex: none; padding: 12px 16px 16px; }
+.tw-c-foot { display: flex; align-items: center; gap: 8px; flex: none; padding: 12px 20px 20px; }
 .tw-c-send { display: inline-flex; height: 36px; border-radius: 10px; overflow: hidden; background: var(--tw-accent); }
 .tw-c-send .tw-send,
 .tw-c-send .tw-send-more {
