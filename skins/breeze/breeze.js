@@ -1254,7 +1254,9 @@
             if (window.tw_before_save)
                 tw_before_save();
 
-            $.ajax({type: 'POST', url: form.attr('action') || location.href, data: form.serialize()})
+            // beforeSend: no X-Roundcube-Request header (Roundcube's ajaxSetup adds it), or Roundcube runs this as
+            // an ajax call, which the save actions ignore (MODE_HTTP): nothing saved and no error
+            $.ajax({type: 'POST', url: form.attr('action') || location.href, data: form.serialize(), beforeSend: $.noop})
                 .done(function(html) {
                     var err = /display_message\("((?:[^"\\]|\\.)*)","(?:error|warning)"/.exec(html),
                         re = /(update_identity_row|update_response_row|replace_folder_row)\((.*?)\);/g, m, prc = parent.rcmail;
@@ -1304,8 +1306,8 @@
     }
 
     /* ----------------------------------------------------------------- settings: extra mailbox form (ident_switch plugin)
-       A new identity is always a separate mailbox: name, address and password; the servers come from the
-       plugin's preconfig and stay folded under "Server settings" unless the domain has none. */
+       A new identity is always a separate mailbox: name, address, password and the IMAP/SMTP sections,
+       pre-filled from the plugin's preconfig. */
     function account_form() {
         var mode = $('select[name="_ident_switch.form.common.mode"]');
         if (!mode.length)
@@ -1316,6 +1318,10 @@
 
         // the plugin blanks ports equal to the default, then sends mail via port 587 when the SMTP port is empty
         window.tw_before_save = function() {
+            // the sidebar shows the plugin's label (or the address); keep it equal to the display name,
+            // as the plugin already does for the primary account (it allows 32 characters)
+            if (mode.val() == 'separate')
+                field('common.label').val($.trim($('input[name="_name"]').val()).slice(0, 32));
             $.each(['imap', 'smtp'], function(i, p) {
                 var port = field(p + '.port');
                 if (!$.trim(port.val()))
@@ -1324,16 +1330,15 @@
         };
 
         if (!/^add-/.test(rcmail.env.action) && !new_identity()) {
-            if (mode.val() == 'separate')
-                mode.closest('fieldset').hide(); // switching a mailbox to "Primary" would just disable it
+            if (mode.val() == 'separate') // switching a mailbox to "Primary" would just disable it; the label follows the name
+                setTimeout(function() { // after the plugin's docready init, which shows every section
+                    mode.closest('fieldset').add(field('common.label').closest('fieldset')).hide();
+                }, 0);
             return;
         }
 
-        var email = $('input[name="_email"]'), pass = field('imap.password'),
-            servers = field('imap.host').closest('fieldset').add(field('smtp.host').closest('fieldset')),
-            preconfig = rcmail.env.ident_switch_preconfig || {};
-
-        var extra = mode.closest('fieldset').add(field('common.label').closest('fieldset'))
+        var email = $('input[name="_email"]'), pass = field('imap.password').attr('autocomplete', 'new-password'),
+            extra = mode.closest('fieldset').add(field('common.label').closest('fieldset'))
             .add(field('notify.check').closest('fieldset')).add($('[name="_signature"]').closest('fieldset'));
 
         $('h1.voice').first().text(t('new_account'));
@@ -1345,20 +1350,10 @@
         if (new_identity()) // back from a failed connection test: most often the password
             setTimeout(function() { row(pass).addClass('tw-invalid'); pass.focus().select(); }, 0);
 
-        function show_servers(on) {
-            servers.toggle(on);
-            toggle.attr('aria-expanded', String(on));
-        }
-        var toggle = $('<button type="button" class="tw-servers-toggle">').text(t('server_settings'))
-            .on('click', function() { show_servers(!servers.is(':visible')); });
-        $('<tr class="tw-servers-row"><td colspan="2"></td></tr>').insertAfter(row(pass)).find('td').append(toggle);
-
         function apply_mode() {
-            var domain = (email.val().split('@')[1] || '').toLowerCase();
             mode.prop('disabled', false).val('separate');
             plugin_switchIdent_mode_onChange('separate'); // shows every section of a separate account
             extra.hide();
-            show_servers(!(preconfig[domain] || preconfig['*']));
         }
         // after the plugin's own docready init, which picks "Primary" and disables the select without an address
         setTimeout(apply_mode, 0);
