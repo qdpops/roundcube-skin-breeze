@@ -18,10 +18,33 @@
     --tw-hover: #f5f6f8;
     --tw-selected: #eaf1ff;
     --tw-red: #f0445b;
+    --tw-secondary: #eef0f4;
+    --tw-secondary-hover: #e3e6ec;
     --tw-top: 64px;
     --tw-aside: 250px;
     --tw-radius: 16px;
     --tw-font: Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Roundcube sets html.dark-mode when the user picks the dark theme. Only the
+   surfaces change; spacing, radii and the layout stay identical. */
+html.dark-mode {
+    --tw-bg: #0f1420;
+    --tw-card: #171d2b;
+    --tw-text: #e8ecf5;
+    --tw-text-2: #b3bccd;
+    --tw-muted: #98a2b6;
+    --tw-faint: #7a849a;
+    --tw-line: #262e40;
+    --tw-input: #303a4f;
+    --tw-accent: #5b96ff;
+    --tw-accent-hover: #78a9ff;
+    --tw-accent-light: #1d2b47;
+    --tw-hover: #1e2536;
+    --tw-selected: #202d47;
+    --tw-red: #ff6b7d;
+    --tw-secondary: #232b3c;
+    --tw-secondary-hover: #2b3448;
 }
 
 html, body { background: var(--tw-bg); }
@@ -81,7 +104,7 @@ html body .ti.tw-icon-after::before { order: 2; }
 .tw-btn.tw-mini::before { width: 14px !important; height: 14px !important; }
 .tw-btn.tw-muted { color: var(--tw-muted) !important; }
 .tw-btn.disabled { opacity: .4; pointer-events: none; }
-.tw-btn.tw-round { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--tw-line); background: #fff; }
+.tw-btn.tw-round { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--tw-line); background: var(--tw-card); }
 
 /* ============================================================ wide layout: top bar + sidebar + card */
 html.layout-large body:not(.task-login) #layout,
@@ -221,7 +244,7 @@ body.tw-resizing iframe { pointer-events: none; } /* frames would swallow mousem
     padding: 0 10px 0 8px;
     border: 1px solid var(--tw-line);
     border-radius: 8px;
-    background: #fff;
+    background: var(--tw-card);
     color: var(--tw-text) !important;
     font-size: 13px;
     font-weight: 500;
@@ -318,7 +341,7 @@ html.layout-normal #layout-menu .popover-header a.cancel { display: none; }
     height: 40px;
     margin: 0;
     padding: 0 6px 0 12px;
-    background: #fff;
+    background: var(--tw-card);
     border: 0;
     border-radius: 8px;
 }
@@ -418,7 +441,7 @@ html.layout-normal #taskmenu .special-buttons { margin-left: 8px; padding-left: 
 #taskmenu a.tw-nav.tw-icon-only { width: 36px; padding: 0; justify-content: center; }
 #taskmenu a.tw-nav.tw-icon-only .inner { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 #taskmenu a.tw-nav:hover,
-#taskmenu a.tw-nav.selected { background: #fff; }
+#taskmenu a.tw-nav.selected { background: var(--tw-card); }
 html.layout-large #taskmenu a.tw-nav.mail,
 html.layout-normal #taskmenu a.tw-nav.mail { display: none; } /* the logo leads to the mailbox */
 #taskmenu a:after { display: none !important; }
@@ -453,7 +476,7 @@ html.layout-normal #layout-sidebar > .header { display: none; }
     font-weight: 600;
     text-decoration: none !important;
 }
-.tw-compose-btn:hover { background: #cbdcff; }
+.tw-compose-btn:hover { background: var(--tw-accent-light); }
 
 .tw-list, .tw-list li { margin: 0; padding: 0; list-style: none; border: 0; background: none; }
 .tw-list li > a,
@@ -475,7 +498,7 @@ html.layout-normal #layout-sidebar > .header { display: none; }
 }
 .tw-list li > a:hover { background: rgba(255, 255, 255, .7); }
 .tw-list li.selected > a,
-.tw-list li.selected > div > a { background: #fff; }
+.tw-list li.selected > div > a { background: var(--tw-card); }
 .tw-list li > a::before {
     content: "";
     flex: none;
@@ -702,7 +725,7 @@ html.layout-small #mailtoolbar .tw-nav-next,
 html.layout-phone #mailtoolbar .tw-nav-next { display: none; }
 
 /* message page inside the frame */
-body.action-preview, body.action-show { background: #fff; }
+body.action-preview, body.action-show { background: var(--tw-card); }
 .tw-message { padding: 4px 24px 24px; }
 .tw-subject { margin: 8px 0 16px; font-size: 20px; font-weight: 600; line-height: 28px; color: var(--tw-text); word-break: break-word; }
 .tw-msg-head { display: flex; align-items: flex-start; gap: 12px; padding-bottom: 16px; }
@@ -730,7 +753,7 @@ body.action-preview, body.action-show { background: #fff; }
     padding: 6px 10px !important;
     border: 1px solid var(--tw-line);
     border-radius: 8px;
-    background: #fff;
+    background: var(--tw-card);
 }
 .tw-attachments li a { color: var(--tw-text) !important; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -778,7 +801,7 @@ body.action-compose.iframe #layout-content,
     gap: 6px;
     min-height: 34px;
     padding: 0 6px 0 12px;
-    background: #fff;
+    background: var(--tw-card);
     border: 1px solid var(--tw-input);
     border-radius: 10px;
 }
@@ -818,13 +841,13 @@ body.action-compose.iframe #layout-content,
 .tw-c-row .recipient-input { min-height: 32px; padding: 0 !important; }
 .tw-c-row ::placeholder { color: var(--tw-faint); }
 .tw-c-row .recipient-input li.recipient ~ li.input input::placeholder { color: transparent; }
-.tw-c-body { flex: 1 1 auto; min-height: 240px; display: flex; flex-direction: column; background: #fff; border: 1px solid var(--tw-input); border-radius: 10px; overflow: hidden; }
+.tw-c-body { flex: 1 1 auto; min-height: 240px; display: flex; flex-direction: column; background: var(--tw-card); border: 1px solid var(--tw-input); border-radius: 10px; overflow: hidden; }
 .tw-c-body textarea#composebody { flex: 1 1 auto; border: 0; border-radius: 0; resize: none; padding: 12px; font-size: 14px; }
 .tw-c-body .tox-tinymce { flex: 1 1 auto; border: 0 !important; border-radius: 0 !important; }
 .tw-c-body .tox .tox-toolbar,
 .tw-c-body .tox .tox-toolbar__primary,
 .tw-c-body .tox .tox-toolbar-overlord,
-.tw-c-body .tox .tox-editor-header { background: #fff !important; border: 0 !important; box-shadow: none !important; }
+.tw-c-body .tox .tox-editor-header { background: var(--tw-card) !important; border: 0 !important; box-shadow: none !important; }
 .tw-c-body .tox .tox-toolbar__group { padding: 0 4px; border-color: var(--tw-line) !important; }
 .tw-c-body .tox .tox-tbtn { color: var(--tw-text); }
 .tw-c-body .tox .tox-tbtn svg { fill: var(--tw-text) !important; }
@@ -837,7 +860,7 @@ body.action-compose.iframe #layout-content,
 .tw-c-attachments.active { min-height: 80px; margin-top: 8px; border: 2px dashed var(--tw-accent); border-radius: 10px; }
 .tw-c-body .tox-tinymce { height: auto !important; min-height: 220px; }
 .tw-c-attachments .attachmentslist { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
-.tw-c-attachments .attachmentslist li { margin: 0; padding: 4px 8px; border: 1px solid var(--tw-line); border-radius: 8px; background: #fff; font-size: 13px; }
+.tw-c-attachments .attachmentslist li { margin: 0; padding: 4px 8px; border: 1px solid var(--tw-line); border-radius: 8px; background: var(--tw-card); font-size: 13px; }
 .tw-c-foot { display: flex; align-items: center; gap: 8px; flex: none; padding: 12px 16px 16px; }
 .tw-c-send { display: inline-flex; height: 36px; border-radius: 10px; overflow: hidden; background: var(--tw-accent); }
 .tw-c-send .tw-send,
@@ -869,7 +892,7 @@ body.action-compose.iframe #layout-content,
     overflow-y: auto;
     box-sizing: border-box;
     padding: 6px;
-    background: #fff;
+    background: var(--tw-card);
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(5, 12, 38, .12), 0 0 0 1px rgba(5, 12, 38, .04);
 }
@@ -938,7 +961,7 @@ body.task-login #login-form {
     box-sizing: border-box;
     margin: 0;
     padding: 32px;
-    background: #fff;
+    background: var(--tw-card);
     border: 1px solid #edeef3;
     border-radius: 24px;
     box-shadow: 0 5px 20px rgba(27, 54, 74, .03);
@@ -955,7 +978,7 @@ body.task-login .tw-input input.form-control {
     padding: 12px 44px 12px 16px;
     border: 1px solid var(--tw-input);
     border-radius: 8px;
-    background: #fff;
+    background: var(--tw-card);
     box-shadow: none;
     font-size: 14px;
     font-weight: 500;
@@ -989,7 +1012,7 @@ body.task-login #rcmloginsubmit {
     text-transform: none;
     opacity: 1;
 }
-body.task-login #rcmloginsubmit.tw-inactive { background: #e8ebef; color: var(--tw-faint); }
+body.task-login #rcmloginsubmit.tw-inactive { background: var(--tw-input); color: var(--tw-faint); }
 html.layout-phone body.task-login #login-form { padding: 24px 20px; border-radius: 16px; }
 html.layout-phone .tw-login-title { font-size: 20px; line-height: 28px; }
 
@@ -1008,7 +1031,7 @@ html.layout-phone .tw-login-title { font-size: 20px; line-height: 28px; }
     font-weight: 500;
     text-decoration: none !important;
 }
-.tw-back-mail:hover { background: #fff; }
+.tw-back-mail:hover { background: var(--tw-card); }
 html.layout-large body.task-settings #layout-sidebar > .header,
 html.layout-normal body.task-settings #layout-sidebar > .header,
 html.layout-large body.task-addressbook #layout-sidebar > .header,
@@ -1042,7 +1065,7 @@ html.layout-normal body.task-addressbook #layout-sidebar > .header { display: no
 #settings-menu li.identities a { --ti: url(../images/icons/id-card.svg); }
 #settings-menu li.responses a { --ti: url(../images/icons/message.svg); }
 #settings-menu li.selected a,
-#settings-menu li a:hover { background: #fff; }
+#settings-menu li a:hover { background: var(--tw-card); }
 
 /* headers of the cards: no Elastic grey band; settings show the section title in the content header */
 html #layout > #layout-list > .header,
@@ -1247,7 +1270,7 @@ body.task-addressbook #layout-list table.listing tr:hover td { background: var(-
 body.task-settings.formcontainer,
 body.task-settings.formcontainer #layout-content,
 body.task-settings.formcontainer .formcontent,
-body.task-settings.formcontainer .formbuttons { background: #fff; }
+body.task-settings.formcontainer .formbuttons { background: var(--tw-card); }
 body.task-settings .formcontent { padding: 24px; box-sizing: border-box; }
 html.layout-large body.task-settings #layout-content > .header .header-title,
 html.layout-normal body.task-settings #layout-content > .header .header-title { display: block !important; position: static; }
@@ -1297,7 +1320,7 @@ body.task-settings table.propform .custom-select {
     min-height: 36px;
     border: 1px solid var(--tw-input);
     border-radius: 8px;
-    background-color: #fff;
+    background-color: var(--tw-card);
     font-size: 14px;
     font-weight: 500;
     color: var(--tw-text);
@@ -1340,7 +1363,7 @@ html.layout-small body.task-settings table.propform td:not(.title) { flex: 1 1 1
     padding: 4px;
     border: 0;
     border-radius: 12px;
-    background: #fff;
+    background: var(--tw-card);
     box-shadow: 0 4px 12px rgba(5, 12, 38, .12), 0 0 0 1px rgba(5, 12, 38, .04);
     overflow: hidden;
 }
@@ -1453,13 +1476,13 @@ textarea:focus {
 input[type="checkbox"], input[type="radio"] { accent-color: var(--tw-accent); }
 .btn-secondary,
 .btn-secondary:not(:disabled):not(.disabled):active {
-    background: #eef0f4;
-    border-color: #eef0f4;
+    background: var(--tw-secondary);
+    border-color: var(--tw-secondary);
     color: var(--tw-text);
     border-radius: 12px;
     font-weight: 600;
 }
-.btn-secondary:hover { background: #e3e6ec; border-color: #e3e6ec; color: var(--tw-text); }
+.btn-secondary:hover { background: var(--tw-secondary-hover); border-color: var(--tw-secondary-hover); color: var(--tw-text); }
 .btn-danger, .btn-danger:not(:disabled):not(.disabled):active { background: var(--tw-red); border-color: var(--tw-red); border-radius: 12px; font-weight: 600; }
 .btn::before { display: none !important; } /* Elastic's glyphs in buttons (check, cross, trash) */
 ::selection { background: rgba(49, 123, 255, .2); }
@@ -1475,7 +1498,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--tw-accent); }
     padding: 0 !important;
     border: 0 !important;
     border-radius: 24px !important;
-    background: #fff !important;
+    background: var(--tw-card) !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, .2) !important;
     overflow: visible; /* Elastic puts select popups inside the dialog: they must not be clipped */
     font-family: var(--tw-font);
@@ -1566,7 +1589,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--tw-accent); }
 /* dialogs showing a page in a frame (About, ...): the page sets the 24px side padding itself */
 .ui-dialog .ui-dialog-content:has(> iframe) { padding: 0 !important; overflow: hidden; }
 .ui-dialog .ui-dialog-content > iframe { display: block; width: 100% !important; height: min(60vh, 520px); border: 0; } /* breeze.js fits it to the page */
-body.action-about { background: #fff; }
+body.action-about { background: var(--tw-card); }
 body.action-about .frame-content { padding: 4px 24px 16px; color: var(--tw-text); font-size: 14px; line-height: 1.55; }
 body.action-about .sysname { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
 body.action-about .copyright { margin: 0 0 16px; color: var(--tw-muted); }
@@ -1642,7 +1665,7 @@ body.task-settings table.propform tr:has(td:not(.title) .form-text, td:not(.titl
     max-height: calc(100vh - 100px);
     overflow-y: auto;
     padding: 16px;
-    background: #fff;
+    background: var(--tw-card);
     border: 0;
     border-radius: 16px;
     box-shadow: 0 4px 12px rgba(5, 12, 38, .12), 0 0 0 1px rgba(5, 12, 38, .04);
@@ -1679,7 +1702,7 @@ body.task-settings table.propform tr:has(td:not(.title) .form-text, td:not(.titl
     height: 40px;
     border: 1px solid var(--tw-input) !important;
     border-radius: 10px !important;
-    background-color: #fff;
+    background-color: var(--tw-card);
     font-size: 14px;
 }
 #searchmenu .formbuttons { display: flex; justify-content: flex-end; margin: 6px 0 0; padding: 0; border: 0; background: none; }
@@ -1709,7 +1732,7 @@ html.layout-small #tw-search-slot,
 html.layout-phone #tw-search-slot { display: none; }
 
 html.layout-small #layout > div,
-html.layout-phone #layout > div { background: #fff; }
+html.layout-phone #layout > div { background: var(--tw-card); }
 html.layout-small #layout-sidebar,
 html.layout-phone #layout-sidebar { background: var(--tw-bg) !important; padding: 0 8px; }
 html.layout-small #layout-sidebar > .header,
@@ -1810,8 +1833,8 @@ html.layout-phone .floating-action-buttons a.button { background-color: var(--tw
 .tw-layout:focus-visible { outline: 2px solid var(--tw-accent); outline-offset: 2px; }
 .tw-layout-name { text-align: center; }
 /* little pictures: three list rows (i) and the message (b) */
-.tw-layout-pic { display: grid; gap: 4px; height: 64px; padding: 6px; border-radius: 8px; background: #fff; }
-.tw-layout-pic i, .tw-layout-pic b { display: block; border-radius: 4px; background: #eef0f4; }
+.tw-layout-pic { display: grid; gap: 4px; height: 64px; padding: 6px; border-radius: 8px; background: var(--tw-card); }
+.tw-layout-pic i, .tw-layout-pic b { display: block; border-radius: 4px; background: var(--tw-secondary); }
 .tw-layout-pic i::before { content: ""; display: block; width: 6px; height: 6px; margin: 3px 0 0 4px; border-radius: 50%; background: #f0445b; }
 .tw-layout-pic i:nth-child(2)::before { background: #20b26c; }
 .tw-layout-pic i:nth-child(3)::before { background: #317bff; }
@@ -1846,7 +1869,7 @@ html.layout-phone .tw-layouts { grid-template-columns: 1fr; }
     overflow-y: auto;
     box-sizing: border-box;
     padding: 24px;
-    background: #fff;
+    background: var(--tw-card);
     border-radius: 24px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
 }
@@ -1887,7 +1910,7 @@ html.layout-phone .tw-layouts { grid-template-columns: 1fr; }
     padding: 0 12px;
     border: 1px solid var(--tw-input);
     border-radius: 12px;
-    background: #fff;
+    background: var(--tw-card);
     color: var(--tw-text);
     font-size: 14px;
     font-weight: 500;
@@ -1920,7 +1943,7 @@ select.tw-text-input { appearance: auto; }
     overflow-y: auto;
     margin-top: 4px;
     padding: 4px;
-    background: #fff;
+    background: var(--tw-card);
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(5, 12, 38, .12);
 }
@@ -1955,7 +1978,7 @@ select.tw-text-input { appearance: auto; }
     cursor: pointer;
 }
 .tw-primary-btn:hover { background: var(--tw-accent-hover); }
-.tw-primary-btn:disabled { background: #e8ebef; color: var(--tw-faint); cursor: default; }
+.tw-primary-btn:disabled { background: var(--tw-input); color: var(--tw-faint); cursor: default; }
 
 /* ============================================================ folder "⋮" menu (sidebar) */
 #mailboxlist li.mailbox { position: relative; }
@@ -2022,7 +2045,7 @@ html.layout-large body.task-settings.action-plugin-tw-filters #layout > #layout-
 html.layout-normal body.task-settings.action-plugin-tw-filters #layout > #layout-content { grid-column: 2 / -1; }
 .tw-filters-page { padding: 24px; overflow-y: auto; }
 .tw-filters { display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
-.tw-filter-row { padding: 12px; border-radius: 12px; background: #f6f7f9; }
+.tw-filter-row { padding: 12px; border-radius: 12px; background: var(--tw-hover); }
 @media (max-width: 600px) {
     .tw-filter-row .tw-rule { flex-wrap: wrap; }
     .tw-filter-row .tw-rule .tw-rule-folder { flex: 1 1 100%; }
@@ -2040,7 +2063,7 @@ html.layout-normal body.task-settings.action-plugin-tw-filters #layout > #layout
     width: 352px;
     max-width: calc(100vw - 32px);
     box-sizing: border-box;
-    background: #fff;
+    background: var(--tw-card);
     border-radius: var(--tw-radius);
     box-shadow: 0 10px 30px rgba(10, 27, 57, .15);
 }
@@ -2058,7 +2081,7 @@ html.layout-normal body.task-settings.action-plugin-tw-filters #layout > #layout
     height: 40px;
     padding: 0;
     border: 1px solid var(--tw-input);
-    background: #fff;
+    background: var(--tw-card);
     color: var(--tw-text) !important;
     font-size: 14px;
     font-weight: 500;
@@ -2086,7 +2109,7 @@ html.layout-normal body.task-settings.action-plugin-tw-filters #layout > #layout
 }
 .tw-contacts-list > li:hover, .tw-contacts-list > li:focus-visible { background: var(--tw-hover); }
 .tw-contacts-list > li.tw-contacts-empty { justify-content: center; padding: 24px 8px; color: var(--tw-muted); cursor: default; background: none; }
-#taskmenu a.contacts.selected { background: #fff; }
+#taskmenu a.contacts.selected { background: var(--tw-card); }
 
 /* avatar + name + e-mail (contacts panel, address book list) */
 .tw-avatar.tw-avatar-lg { width: 40px; height: 40px; font-size: 16px; line-height: 40px; }
@@ -2133,12 +2156,12 @@ body.task-addressbook #layout-list > .searchbar {
     margin: 12px 12px 4px;
     border: 1px solid var(--tw-input);
     border-radius: 12px;
-    background: #fff;
+    background: var(--tw-card);
 }
 body.task-addressbook #layout-list > .searchbar input { background: none; border: 0; box-shadow: none; }
 
 /* contact card (content frame) */
-body.task-addressbook.formcontainer, body.task-addressbook.formcontainer .formcontent { background: #fff; }
+body.task-addressbook.formcontainer, body.task-addressbook.formcontainer .formcontent { background: var(--tw-card); }
 body.task-addressbook .formcontent { padding: 24px; box-sizing: border-box; }
 body.task-addressbook .contact-header { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; }
 body.task-addressbook .contact-header .contact-photo { flex: none; width: 72px !important; height: 72px; margin: 0; padding: 0; border: 0; border-radius: 50%; overflow: hidden; background: var(--tw-hover); }
@@ -2161,7 +2184,7 @@ body.task-addressbook .nav-tabs .nav-link {
     font-weight: 600;
 }
 body.task-addressbook .nav-tabs .nav-link.active { border-bottom-color: var(--tw-accent); color: var(--tw-text); }
-body.task-addressbook fieldset.contactfieldgroup { margin: 0 0 16px; padding: 16px; border: 0; border-radius: 12px; background: #f6f7f9; }
+body.task-addressbook fieldset.contactfieldgroup { margin: 0 0 16px; padding: 16px; border: 0; border-radius: 12px; background: var(--tw-hover); }
 body.task-addressbook fieldset.contactfieldgroup > legend {
     float: none;
     width: auto;
@@ -2198,7 +2221,7 @@ body.task-addressbook .formcontent .custom-select {
     height: 40px;
     border: 1px solid var(--tw-input);
     border-radius: 10px !important;
-    background-color: #fff;
+    background-color: var(--tw-card);
     color: var(--tw-text);
     font-size: 14px;
     box-shadow: none;
@@ -2219,7 +2242,7 @@ body.task-addressbook .contactfieldbutton.deletebutton {
     color: var(--tw-muted);
 }
 body.task-addressbook .contactfieldbutton.deletebutton:hover { color: var(--tw-red); }
-body.task-addressbook .formbuttons { padding: 0 24px 24px; border: 0; background: #fff; }
+body.task-addressbook .formbuttons { padding: 0 24px 24px; border: 0; background: var(--tw-card); }
 body.task-addressbook .formbuttons .btn-primary {
     height: 44px;
     padding: 0 24px;
@@ -2267,7 +2290,7 @@ html.layout-normal body.task-addressbook.tw-ab-open #layout > #layout-content { 
     margin-left: auto;
     padding: 2px 8px;
     border-radius: 8px;
-    background: #fff;
+    background: var(--tw-card);
     color: var(--tw-text);
     font-size: 12px;
     font-weight: 600;
