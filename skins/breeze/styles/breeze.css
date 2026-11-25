@@ -2530,8 +2530,10 @@ body.task-settings tr.tw-required td.title label::after { content: " *"; color: 
 body.task-settings tr.tw-invalid input { border-color: var(--tw-red) !important; box-shadow: 0 0 0 3px rgba(240, 68, 91, .15) !important; }
 
 /* list options (the sliders button): a panel next to the button, like "Период" */
-#tw-listopts-menu.tw-menu { width: 340px; padding: 10px 16px 10px 20px; border-radius: 16px; }
-.tw-opt input.tw-switch {
+#tw-listopts-menu.tw-menu,
+#tw-compose-options.tw-menu { width: 340px; padding: 10px 16px 10px 20px; border-radius: 16px; }
+.tw-opt input.tw-switch,
+#tw-compose-options .tw-opt input[type="checkbox"] {
     position: relative;
     flex: none;
     width: 34px;
@@ -2544,9 +2546,9 @@ body.task-settings tr.tw-invalid input { border-color: var(--tw-red) !important;
     cursor: pointer;
     transition: background .15s;
 }
-.tw-opt input.tw-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left .15s; }
-.tw-opt input.tw-switch:checked { background: var(--tw-accent); }
-.tw-opt input.tw-switch:checked::after { left: 17px; }
+.tw-opt input.tw-switch::after, #tw-compose-options .tw-opt input[type="checkbox"]::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left .15s; }
+.tw-opt input.tw-switch:checked, #tw-compose-options .tw-opt input[type="checkbox"]:checked { background: var(--tw-accent); }
+.tw-opt input.tw-switch:checked::after, #tw-compose-options .tw-opt input[type="checkbox"]:checked::after { left: 17px; }
 
 /* ============================================================ avatars: sender logos and the tick
    breeze.js puts the sender's logo (tw_folders, plugin.tw-logo) over the letter once it has loaded */
@@ -2649,10 +2651,13 @@ body.tw-in-trash .tw-listbar .tw-purge { display: inline-flex; }
 .searchbar form input { cursor: text; user-select: text; }
 /* list options panel: labels on one line */
 #tw-listopts-menu .tw-opt > span { white-space: nowrap; }
-/* list options panel, in the look of "Период": no lines between rows, light compact selects */
-#tw-listopts-menu .tw-opt { min-height: 40px; }
-#tw-listopts-menu .tw-opt + .tw-opt { border-top: 0; }
-#tw-listopts-menu .tw-opt select {
+/* list options and compose options panels, in the look of "Период": no lines between rows, light compact selects */
+#tw-listopts-menu .tw-opt,
+#tw-compose-options .tw-opt { min-height: 40px; }
+#tw-listopts-menu .tw-opt + .tw-opt,
+#tw-compose-options .tw-opt + .tw-opt { border-top: 0; }
+#tw-listopts-menu .tw-opt select,
+#tw-compose-options .tw-opt select {
     flex: none;
     width: auto;
     max-width: 170px;
@@ -2670,8 +2675,10 @@ body.tw-in-trash .tw-listbar .tw-purge { display: inline-flex; }
     font-weight: 500;
     cursor: pointer;
 }
-#tw-listopts-menu .tw-opt select:hover { background-color: var(--tw-hover); }
-#tw-listopts-menu .tw-opt select:focus-visible { outline: 2px solid var(--tw-accent-light); }
+#tw-listopts-menu .tw-opt select:hover,
+#tw-compose-options .tw-opt select:hover { background-color: var(--tw-hover); }
+#tw-listopts-menu .tw-opt select:focus-visible,
+#tw-compose-options .tw-opt select:focus-visible { outline: 2px solid var(--tw-accent-light); }
 
 /* "наверх" over the bottom right of a scrolled message list */
 #layout-list { position: relative; }
@@ -2739,3 +2746,50 @@ body.tw-unibar .tw-listbar.tw-tight .tw-btn:not(.tw-icon-only):not(.tw-drop) { w
 /* the bookmark in "remove the flag" mode (breeze.js, body.tw-flag-mode): filled, in the flag colour */
 body.tw-flag-mode .tw-listbar .tw-when-selected .ti-bookmark,
 body.tw-flag-mode #mailtoolbar .ti-bookmark { --ti: url(../images/icons/bookmark-fill.svg); color: var(--tw-red) !important; }
+
+/* links inside a message look like links (the skin's "a { color: inherit }" is for its own UI);
+   a colour the message sets itself (inline style) still wins */
+#messagebody a, #messagebody a:hover { color: #1f6feb; text-decoration: underline; }
+/* message tables as browsers draw them: Bootstrap (Elastic's base) collapses every table, and a collapsed table
+   drops its own padding, the side margins of e.g. a receipt card. A message that wants collapse says so inline */
+#messagebody table { border-collapse: separate; }
+
+/* "Ответить на письмо…" under a message, then the reply block in its place (breeze.js quick_reply) */
+.tw-quick-reply { margin: 24px 0 8px; }
+.tw-qr-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    height: 48px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--tw-bg);
+    color: var(--tw-muted);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+}
+.tw-qr-btn:hover { background: var(--tw-hover); color: var(--tw-text); }
+.tw-quick-reply.tw-qr-open { border-radius: 16px; box-shadow: 0 2px 12px rgba(5, 12, 38, .1), 0 0 0 1px var(--tw-line); overflow: hidden; }
+.tw-qr-frame { display: block; width: 100%; height: 300px; border: 0; }
+/* the compose page inside that block, as in Timeweb: the recipient chip, bare text, send and attach; "maximize" top right */
+body.tw-inline-reply #compose_from,
+body.tw-inline-reply #compose_subject,
+body.tw-inline-reply #compose_to > .ti-more,
+body.tw-inline-reply .tox .tox-editor-header,
+body.tw-inline-reply .tw-c-foot .ti-external,
+body.tw-inline-reply .tw-c-foot .ti-signature,
+body.tw-inline-reply .tw-c-foot .ti-message,
+body:not(.tw-inline-reply) .tw-qr-expand { display: none !important; }
+body.tw-inline-reply .tw-c-content { padding-top: 14px; }
+body.tw-inline-reply .tw-c-row,
+body.tw-inline-reply .tw-c-body { min-height: 0; padding: 0; border: 0; border-radius: 0; }
+body.tw-inline-reply .tw-c-body .tox-tinymce { min-height: 0; }
+body.tw-inline-reply .tw-qr-expand { position: fixed; top: 12px; right: 14px; }
+body.tw-inline-reply,
+body.tw-inline-reply .tw-composer,
+body.tw-inline-reply .tw-c-content { background: #fff !important; }

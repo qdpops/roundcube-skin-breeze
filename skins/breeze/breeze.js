@@ -57,8 +57,8 @@
         var orig = rc.open_compose_step;
         rc.open_compose_step = function(p) {
             var target = host() || TW;
-            if (target.openCompose && !rc.env.compose_extwin && !rc.env.extwin)
-                return target.openCompose(p);
+            if (target.openCompose && !rc.env.compose_extwin && !rc.env.extwin && target.openCompose(p))
+                return true; // false: no panel on this page (a message opened on its own)
             return orig.apply(rc, arguments);
         };
     }
@@ -76,6 +76,16 @@
             + ' pre, .pre { font-family: inherit; white-space: pre-wrap; }';
         o.config.menubar = false;
         o.config.statusbar = false;
+        // inline reply: the quote folds under "•••" after its intro line; a click on the line folds / unfolds it
+        o.config.content_style += ' body.tw-qr-fold [id$=reply-intro] ~ blockquote { display: none; }'
+            + ' body.tw-qr [id$=reply-intro] { cursor: pointer; }'
+            + ' body.tw-qr [id$=reply-intro]::after { content: "\\2022\\2022\\2022"; display: table; margin-top: 10px;'
+            + ' padding: 0 6px; border-radius: 6px; background: #e3e7ee; color: #6b7280; font-size: 12px;'
+            + ' letter-spacing: 1px; line-height: 18px; }';
+        try { // the reply block under a message has no frame around the text: line it up with the recipient chip
+            if (window.frameElement && window.frameElement.classList.contains('tw-qr-frame'))
+                o.config.content_style += ' body { margin: 10px 2px; }';
+        } catch (e) { /* another origin */ }
     });
 
     rcmail.addEventListener('init', function() {
@@ -1041,12 +1051,29 @@
             read = !rows.some(function(r) { return r.hasClass('unread'); });
             flagged = rows.length && rows.every(function(r) { return r.hasClass('flagged'); });
 
-            items = sel.length == 1 ? [
+            var one = sel.length == 1,
+                sender = one ? (rows[0].find('span.fromto [title]').attr('title') || '') : '';
+
+            // in the order of Timeweb's menu: open / answer, sort out, find, delete
+            items = one ? [
+                [t('open_in_tab'), 'external', function() {
+                    window.open(rcmail.url('show', rcmail.params_from_uid(sel[0])), '_blank');
+                }],
                 [rcmail.gettext('reply'), 'reply', function() { rcmail.command('reply'); }],
                 [rcmail.gettext('replyall'), 'reply-all', function() { rcmail.command('reply-all'); }],
                 [rcmail.gettext('forward'), 'forward', function() { rcmail.command('forward'); }],
+                [rcmail.gettext('editasnew'), 'drafts', function() { rcmail.command('edit', 'new'); }],
                 null
             ] : [];
+            // the plugins' own labels, when they are enabled here
+            if (rcmail.commands['plugin.archive'] !== undefined && rcmail.env.archive_folder)
+                items.push([rcmail.gettext('buttontext', 'archive'), 'archive', function() { rcmail.command('plugin.archive'); }]);
+            if (rcmail.commands['plugin.markasjunk.junk'] !== undefined)
+                items.push([rcmail.gettext('asjunk', 'markasjunk'), 'ban', function() { rcmail.command('plugin.markasjunk.junk'); }]);
+            if (sender)
+                items.push([t('create_filter'), 'filter', function() {
+                    location.href = rcmail.url('settings/plugin.tw-filters', {_tw_from: sender});
+                }]);
             items.push(
                 [rcmail.gettext(read ? 'markunread' : 'markread'), read ? 'mail' : 'mail-open',
                     function() { rcmail.command('mark', read ? 'unread' : 'read'); }],
@@ -1067,12 +1094,13 @@
                     return true; // keep the menu open
                 }]
             );
-            // the plugins' own labels, when they are enabled here
-            if (rcmail.commands['plugin.archive'] !== undefined && rcmail.env.archive_folder)
-                items.push([rcmail.gettext('buttontext', 'archive'), 'archive', function() { rcmail.command('plugin.archive'); }]);
-            if (rcmail.commands['plugin.markasjunk.junk'] !== undefined)
-                items.push([rcmail.gettext('asjunk', 'markasjunk'), 'ban', function() { rcmail.command('plugin.markasjunk.junk'); }]);
-            items.push([rcmail.gettext('delete'), 'trash', function() { rcmail.command('delete'); }, 'tw-danger']);
+            // everything from this sender: the quick search on the address (Roundcube searches From by default)
+            if (sender)
+                items.push([t('sender_mail'), 'user', function() {
+                    $('#mailsearchform').val(sender);
+                    rcmail.command('search');
+                }]);
+            items.push(null, [rcmail.gettext('delete'), 'trash', function() { rcmail.command('delete'); }, 'tw-danger']);
 
             ctx_fill(menu, items);
             ctx_open(menu, e);
@@ -1385,6 +1413,12 @@
         $('<button type="button" class="tw-link-btn ti ti-plus">').text(t('add_rule'))
             .on('click', function() { row({}).find('.tw-rule-value').focus(); })
             .appendTo(page);
+
+        // "Создать фильтр" in a message's right-click menu: a new "От содержит <address>" row, saved once the
+        // folder is chosen (a rule must not move mail to whatever folder happens to be first)
+        var from = new URLSearchParams(location.search).get('_tw_from');
+        if (from && Object.keys(folders).length)
+            row({field: 'from', value: from}).addClass('tw-filter-new').find('.tw-rule-folder').focus();
         if (!Object.keys(folders).length)
             page.append($('<p class="tw-hint">').text(t('create_folder_first')));
     }
@@ -1409,14 +1443,14 @@
 
         var rc = frame[0].contentWindow && frame[0].contentWindow.rcmail;
         if (!panel.prop('hidden') && dirty(rc) && !confirm(t('compose_replace_confirm')))
-            return false;
+            return true; // handled: keep the open one
         if (rc)
             rc.compose_skip_unsavedcheck = true;
 
         p = p || {};
-        $('#tw-compose-title').text(t(p._reply_uid ? 'reply' : p._forward_uid ? 'forward' : p._draft_uid ? 'draft' : 'compose'));
+        $('#tw-compose-title').text(t(p._reply_uid || p._tw_qr ? 'reply' : p._forward_uid ? 'forward' : p._draft_uid ? 'draft' : 'compose'));
         frame.attr('src', rcmail.url('mail/compose', $.extend({_framed: 1}, p)));
-        panel.prop('hidden', false).removeClass('tw-min');
+        panel.prop('hidden', false).removeClass('tw-min').toggleClass('tw-max', !!p._tw_qr || panel.hasClass('tw-max')); // a reply from the message opens big
         return true;
     };
 
@@ -1561,6 +1595,13 @@
     function compose() {
         var panel_host = host();
 
+        // the reply block under a message: recipient, text and the send bar only (its frame says so; the compose
+        // redirect drops the URL parameters)
+        try {
+            if (window.frameElement && window.frameElement.classList.contains('tw-qr-frame'))
+                $(document.body).addClass('tw-inline-reply');
+        } catch (e) { /* another origin */ }
+
         // single identity: no "From" row, as in Timeweb
         if ($('#_from option').length < 2)
             $('#compose_from').addClass('hidden');
@@ -1575,10 +1616,22 @@
         // no longer matches and closing an untouched draft would ask to save it. Re-take it once loaded.
         rcmail.addEventListener('editor-load', function() {
             setTimeout(function() { rcmail.cmp_hash = rcmail.compose_field_hash(); }, 0);
+            var ed = window.tinymce && tinymce.activeEditor, body = ed && ed.getBody();
+            if (body && rcmail.env.tw_qr && $(body).find('[id$=reply-intro]').length) {
+                $(body).addClass('tw-qr tw-qr-fold').on('click', '[id$=reply-intro]', function() { $(body).toggleClass('tw-qr-fold'); });
+            }
         });
 
         if (!panel_host)
             return;
+
+        // inline reply → the big window: save the draft, the message window opens it in the compose panel
+        var expand;
+        $('.tw-qr-expand').on('click', function() {
+            expand = true;
+            rcmail.command('savedraft');
+            return false;
+        });
 
         // stay in the panel after sending: close it and refresh the list in the parent window
         rcmail.sent_successfully = function(type, msg, folders, save_error) {
@@ -1594,6 +1647,10 @@
         var set_draft_id = rcmail.set_draft_id;
         rcmail.set_draft_id = function() {
             set_draft_id.apply(rcmail, arguments);
+            if (expand && arguments[0] && panel_host.expandReply) {
+                rcmail.compose_skip_unsavedcheck = true;
+                return panel_host.expandReply(arguments[0]);
+            }
             var d = new Date();
             $('#tw-c-saved').text(t('saved_at') + ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2));
             panel_host.draftSaved();
@@ -1607,6 +1664,44 @@
         var email = decodeURIComponent((from.attr('href') || '').replace(/^mailto:/i, '').split('?')[0])
             || from.attr('title') || (/<([^>]+)>/.exec(from.text()) || [])[1] || '';
         $('.tw-msg-avatar').replaceWith(avatar(from.text() || from.attr('title'), email).addClass('tw-msg-avatar'));
+        quick_reply();
+    }
+
+    /* "Ответить на письмо…" under a message (Timeweb): opens the reply right there, the compose page in a frame
+       (body.tw-inline-reply there: no subject / From rows). This window plays the panel host for it (composeSent, draftSaved). */
+    function quick_reply() {
+        if (!rcmail.env.uid || rcmail.env.mailbox == rcmail.env.drafts_mailbox || !$('#message-content').length)
+            return;
+
+        var box = $('<div class="tw-quick-reply">').appendTo('#message-content');
+        function collapsed() {
+            box.removeClass('tw-qr-open').empty().append(
+                $('<button type="button" class="tw-qr-btn">').append(
+                    $('<span class="ti ti-reply" aria-hidden="true">'), $('<span>').text(t('quick_reply')))
+                    .on('click', function() {
+                        box.addClass('tw-qr-open').empty().append($('<iframe class="tw-qr-frame">').attr({
+                            title: t('quick_reply'),
+                            src: rcmail.url('mail/compose', {_reply_uid: rcmail.env.uid, _mbox: rcmail.env.mailbox, _framed: 1, _tw_qr: 1})
+                        }));
+                        box[0].scrollIntoView({block: 'nearest', behavior: 'smooth'});
+                    }));
+        }
+        collapsed();
+
+        TW.draftSaved = function() {};
+        // open_compose_step goes to the list window's compose panel, or to the compose page without one
+        TW.expandReply = function(draft_uid) {
+            collapsed();
+            rcmail.open_compose_step({_draft_uid: draft_uid, _mbox: rcmail.env.drafts_mailbox, _tw_qr: 1});
+        };
+        TW.composeSent = function(msg, type, folders) {
+            var top = host();
+            collapsed();
+            if (top && top.composeSent)
+                top.composeSent(msg, type, folders); // the list window: message, refresh
+            else
+                rcmail.display_message(msg, type);
+        };
     }
 
     /* ----------------------------------------------------------------- login */
