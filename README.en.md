@@ -44,7 +44,7 @@ Then do step 2 below. Or by hand, if you already run Roundcube 1.6 or 1.7 withou
    ```
 
 3. Clear `<roundcube>/temp` and reload. The folder icon/color dialog, rules and the contacts panel come from `tw_folders`; without it the skin still renders, but those actions are missing.
-4. Language follows the user's Roundcube setting. Nine languages ship in `plugins/tw_folders/localization`; copy `en_US.inc` for another locale.
+4. Language follows the user's Roundcube setting. 44 languages ship in `plugins/tw_folders/localization`; copy `en_US.inc` for another locale.
 
 ## ✨ Features
 
@@ -57,7 +57,7 @@ Then do step 2 below. Or by hand, if you already run Roundcube 1.6 or 1.7 withou
 | <img src="docs/icons/filter.svg" width="22"> | **Rules** | "From / To / Subject contains → move to folder". No ManageSieve needed: Roundcube runs the rules when it checks mail |
 | <img src="docs/icons/contacts.svg" width="22"> | **Contacts** | Contacts panel in the header, a read-only "From mail" book (people from recent mail), one-click "Add to contacts", a table with your own labels |
 | <img src="docs/icons/layers.svg" width="22"> | **Multi-account** | Several mailboxes in one session via [ident_switch](https://packagist.org/packages/gecka/ident-switch) |
-| <img src="docs/icons/globe.svg" width="22"> | **Languages** | English, Russian, German, French, Spanish, Italian, Brazilian Portuguese, Turkish and Ukrainian; the login page remembers the browser's language |
+| <img src="docs/icons/globe.svg" width="22"> | **Languages** | 44 languages, from English and Russian to Japanese and Arabic; the login page remembers the browser's language |
 | <img src="docs/icons/phone.svg" width="22"> | **Phone** | Panels switch, two-line messages, a floating Compose button, full-screen compose |
 
 ## 📸 Screenshots
